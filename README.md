@@ -1,8 +1,10 @@
-# Common Linkages' Kinematic Models / MEC6319 Course
+# Common Linkages' Kinematic Models / MEC6319 Course and More
 Support files for the kinematic analysis of a few sample linkages studied during the MEC6319 course at Polytechnique Montreal:
 - the planar RRR serial chain
 - the planar fourbar linkage 
 - the slider-crank linkage
+- spherical RRR serial chain
+- spherical fourbar linkage
 
 ![RRR](Media/RRRGUI.png)
 
