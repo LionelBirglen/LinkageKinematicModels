@@ -1,4 +1,4 @@
-function [phi, alpha, A] = fourbar_direct_kinematics(c, b, a, d, theta, config)
+function [phi, alpha, A, r_P] = fourbar_direct_kinematics(geo, theta, config)
 % FOURBAR_DIRECT_KINEMATICS - Compute forward kinematics of a planar four-bar linkage
 %
 % OBJECTIVE:
@@ -7,67 +7,87 @@ function [phi, alpha, A] = fourbar_direct_kinematics(c, b, a, d, theta, config)
 %   and configuration.
 %
 % INPUTS:
-%   c      - length of input crank (link c)
-%   b      - length of coupler link (link b)
-%   a      - length of output link (link a)
-%   d      - length of fixed ground link between joints O and C
-%   theta  - input crank angle at joint C relative to ground (rad)
-%   config - +1 for open configuration, -1 for crossed configuration
+%     geo     = [a, b, c, d, e, epsilon] (all in consistent length units, epsilon in rad)
+%               • a       = length of output link (O→A)
+%               • b       = length of coupler link (B→A)
+%               • c       = length of input crank (C→B)
+%               • d       = length of fixed ground link (O→C)
+%               • e       = distance along coupler from joint A toward B to point P
+%                            (i.e. |A–P| = e)
+%               • epsilon = angle between coupler’s centerline (B→A) and line A→P (rad).
+%     theta   = input‐crank angle (joint C→B) relative to ground (rad)
+%     config  = +1 for “open” configuration, –1 for “crossed” configuration
 %
 % OUTPUTS:
-%   phi   - absolute coupler link angle relative to ground (rad)
-%   alpha - output link angle at joint O relative to ground (rad)
-%   A     - [x, y] coordinates of coupler end point (joint A)
+%     phi     = coupler link absolute angle (A→B) w.r.t. ground (rad)
+%     alpha   = output‐link angle (O→A) w.r.t. ground (rad)
+%     A       = [x_A, y_A] coordinates of coupler endpoint A
+%     r_P     = [x_P, y_P] coordinates of point P on coupler
 %
 % USAGE EXAMPLE:
-%   [phi, alpha, A] = fourbar_direct_kinematics(92, 88, 81, 151, deg2rad(106), 1)
+%   geo = [81, 88, 92, 151, 10, pi/6];theta = deg2rad(106);config = -1;[phi, alpha, A, r_P] = fourbar_direct_kinematics(geo, theta, config)
 %        phi =
-%           -2.1173
+%           0.2023
 %        alpha =
-%            0.1644
+%            1.0623
 %        A =
-%           79.9084   13.2530
-%
+%           39.4367   70.7513
+%        r_P =
+%           46.9154   77.3897
+%   
 % BY: 
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Last Update: 2025/05/15
+% Last Update: 2025/06/03
 % Contact: lionel.birglen@polymtl.ca
 % 
 % Code provided under GNU Affero General Public License v3.0
 
 
-% Fixed ground pivot positions
-O = [0, 0];             % Ground pivot at O (origin)
-C = [d, 0];             % Ground pivot at C
+  %— Unpack geometry vector —
+  a       = geo(1);   % output link O→A
+  b       = geo(2);   % coupler link B→A
+  c       = geo(3);   % input crank C→B
+  d       = geo(4);   % ground link O→C
+  e       = geo(5);   % distance A→P along coupler
+  epsilon = geo(6);   % angle between coupler (B→A) and A→P (rad)
 
-% Position of crank end (joint B)
-B = C + c * [cos(theta), sin(theta)];
+  %— Define fixed pivots in world frame —
+  O = [0, 0];         % ground pivot at O
+  C = [d, 0];         % ground pivot at C = (d,0)
 
-% Compute distance between B and O
-R = norm(O - B);
+  %— Compute position of B (input crank end) —
+  B = C + c * [cos(theta), sin(theta)];
 
-% Check if linkage can close: triangle inequality
-if R > (a + b) || R < abs(a - b)
-    error('Linkage cannot close — invalid geometry.');
-end
+  %— Distance BO and feasibility check —
+  R = norm(O - B);
+  if R > (a + b) || R < abs(a - b)
+    error('Four-bar cannot close: invalid geometry or theta.');
+  end
 
-% Angle from B to O
-angle_BO = atan2(O(2) - B(2), O(1) - B(1));
+  %— Angle from B→O —
+  angle_BO = atan2(O(2) - B(2), O(1) - B(1));
 
-% Law of cosines to compute interior angle at joint B
-epsilon = acos((b^2 + R^2 - a^2) / (2 * b * R));
+  %— Use law of cosines at B to get coupler angle offset epsilon_B —
+  cos_arg = (b^2 + R^2 - a^2) / (2*b*R);
+  cos_arg = min(max(cos_arg, -1), +1);  % clamp in [-1,1]
+  epsilon_B = acos(cos_arg);
 
-% Coupler link angle phi based on configuration
-phi = angle_BO + config * epsilon;
+ %— Compute φ_old = angle of vector B→A w.r.t. ground —
+  phi_old = angle_BO + config * epsilon_B;
+  phi_old = atan2(sin(phi_old), cos(phi_old));  % normalize
 
-% Compute coupler endpoint A position
-A = B + b * [cos(phi), sin(phi)];
+  %— Now set φ = angle of vector A→B = φ_old + π —
+  phi = phi_old + pi;
+  phi = atan2(sin(phi), cos(phi));  % normalize to [−π, π]
 
-% Output link angle alpha (angle O->A)
-alpha = atan2(A(2), A(1));
+  %— Compute position of A using φ_old (coupler length b from B→A) —
+  A = B + b * [cos(phi_old), sin(phi_old)];
 
-% Normalize angles to [-pi, pi]
-phi   = atan2(sin(phi), cos(phi));
-alpha = atan2(sin(alpha), cos(alpha));
+  %— Output‐link angle α (O→A) —
+  alpha = atan2(A(2), A(1));
+  alpha = atan2(sin(alpha), cos(alpha));  % normalize
+
+  %— Compute P on the coupler using φ (A→B direction) —
+  r_P = A + e * [cos(phi + epsilon), sin(phi + epsilon)];
 end

@@ -18,345 +18,440 @@ function fourbar_gui()
 %   >> fourbar_gui
 %   Opens the GUI with default link lengths and angle.
 %
-% BY: 
+% BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Last Update: 2025/05/15
+% Last Update: 2025/06/03
 % Contact: lionel.birglen@polymtl.ca
-% 
+%
 % Code provided under GNU Affero General Public License v3.0
-
 
 % ---------------------------------------------------------------------
 % INITIALIZATION
 % ---------------------------------------------------------------------
 
-% Create main figure window
-f = figure('Name', 'Four-Bar Linkage','Position', [100 100 850 600]);
+%— Default geometry/state —
+default = struct(...
+    'a', 81, ...               % output link O→A
+    'b', 88, ...               % coupler B→A
+    'c', 92, ...               % input crank C→B
+    'd', 151, ...              % ground link O→C
+    'e', 80, ...                % distance A→P along coupler
+    'epsilon', pi/6, ...          % ε in radians (converted from degrees)
+    'angle_deg', 106, ...      % initial theta (if Direct) or α (if Inverse) in degrees
+    'config', -1 ...           % –1 = crossed, +1 = open
+    );
 
-% Default linkage parameters
-default = struct('a', 81, ...  % Output link length
-    'b', 88, ...               % Coupler link length
-    'c', 92, ...               % Input crank length
-    'd', 151, ...              % Ground link length
-    'theta', deg2rad(106),...  % Initial input angle (rad)
-    'config', -1);             % Configuration flag: +1 open, -1 crossed
-
-% State variables
-configState    = default.config;   % Current linkage configuration
-modeState      = 1;                % Kinematics mode: 1=direct, 2=inverse
-showAlternate  = true;             % Flag for alternate solution display
-animating      = false;            % Animation on/off flag
+%— GUI state flags —
+configState   = default.config;  % +1=open, –1=crossed
+modeState     = 1;               % 1=Direct, 2=Inverse
+showAlternate = true;            % show alternate config?
+animating     = false;           % animation on/off
 
 % ---------------------------------------------------------------------
 % GUI COMPONENTS
 % ---------------------------------------------------------------------
 
-% Input link length c
-uicontrol('Style','text','Position',[10 550 120 20],'String','Input link c');
-input_c = uicontrol('Style','edit','String',num2str(default.c),...
-    'Position',[130 550 150 20],'Callback',@updatePlot);
+%— Create figure & controls —
+f = figure('Name','Four-Bar Linkage GUI','Position',[300 100 900 600]);
 
-% Coupler link length b
-uicontrol('Style','text','Position',[10 520 120 20],'String','Coupler link b');
-input_b = uicontrol('Style','edit','String',num2str(default.b),...
-    'Position',[130 520 150 20],'Callback',@updatePlot);
+% a (output link)
+uicontrol('Style','text','Position',[10 550 120 20],'String','a (O→A)');
+input_a = uicontrol('Style','edit','Position',[130 550 150 20], ...
+    'String',num2str(default.a), 'Callback',@updatePlot);
 
-% Output link length a
-uicontrol('Style','text','Position',[10 490 120 20],'String','Output link a');
-input_a = uicontrol('Style','edit','String',num2str(default.a),...
-    'Position',[130 490 150 20],'Callback',@updatePlot);
+% b (coupler)
+uicontrol('Style','text','Position',[10 520 120 20],'String','b (B→A)');
+input_b = uicontrol('Style','edit','Position',[130 520 150 20], ...
+    'String',num2str(default.b), 'Callback',@updatePlot);
 
-% Ground link length d
-uicontrol('Style','text','Position',[10 460 120 20],'String','Ground link d');
-input_d = uicontrol('Style','edit','String',num2str(default.d),...
-    'Position',[130 460 150 20],'Callback',@updatePlot);
+% c (input crank)
+uicontrol('Style','text','Position',[10 490 120 20],'String','c (C→B)');
+input_c = uicontrol('Style','edit','Position',[130 490 150 20], ...
+    'String',num2str(default.c), 'Callback',@updatePlot);
 
-% Label for input/output angle
-angle_label = uicontrol('Style','text','Position',[10 430 120 20],...
-    'String','Input angle θ (deg)');
+% d (ground link)
+uicontrol('Style','text','Position',[10 460 120 20],'String','d (O→C)');
+input_d = uicontrol('Style','edit','Position',[130 460 150 20], ...
+    'String',num2str(default.d), 'Callback',@updatePlot);
 
-% Angle edit box
-input_angle = uicontrol('Style','edit','String',num2str(rad2deg(default.theta)),...
-    'Position',[130 430 150 20],'Callback',@syncSlider);
+% e (distance A→P)
+uicontrol('Style','text','Position',[10 430 120 20],'String','e = |A–P|');
+input_e = uicontrol('Style','edit','Position',[130 430 150 20], ...
+    'String',num2str(default.e), 'Callback',@updatePlot);
 
-% Angle slider control
-angle_slider = uicontrol('Style','slider','Min',0,'Max',360,'Value',rad2deg(default.theta),...
-    'Position',[10 400 270 20],'Callback',@syncEdit);
+% ε (angle from coupler‐extension, in degrees)
+uicontrol('Style','text','Position',[10 400 120 20],'String','ε (deg)');
+input_epsilon = uicontrol('Style','edit','Position',[130 400 150 20], ...
+    'String',num2str(rad2deg(default.epsilon)), 'Callback',@updatePlot);
 
-% Toggle button for configuration (open vs crossed)
-toggle_btn = uicontrol('Style','togglebutton','String','Config: Crossed',...
-    'Position',[10 360 270 30],'Callback',@toggleConfig);
+% Angle (theta if Direct, α if Inverse), in degrees
+uicontrol('Style','text','Position',[10 370 120 20],'String','Angle (°)');
+input_angle = uicontrol('Style','edit','Position',[130 370 150 20], ...
+    'String',num2str(default.angle_deg), 'Callback',@syncSlider);
 
-% Mode selection popup (Direct/Inverse)
-uicontrol('Style','text','Position',[10 320 120 20],'String','Mode');
-mode_menu = uicontrol('Style','popupmenu', 'Position', [130 320 150 20], ...
-    'String', {'Direct', 'Inverse'}, 'Callback', @modeChanged);
+% Slider for angle
+angle_slider = uicontrol('Style','slider','Position',[10 340 270 20], ...
+    'Min',-180,'Max',180,'Value',default.angle_deg, ...
+    'Callback',@syncAngleEdit);
 
-% Checkbox to show/hide alternate configuration
-show_alt_checkbox = uicontrol('Style', 'checkbox', 'Position', [10 290 270 20], ...
-    'String', 'Show alternate config', 'Value', 1, 'Callback', @toggleAlt);
+% Toggle configuration button
+toggle_btn = uicontrol('Style','togglebutton','String','Config: Crossed', ...
+    'Position',[10 300 270 30], 'Callback',@toggleConfig);
 
-% Text area to display computed angles
-angle_text = uicontrol('Style','text','Position',[10 250 300 40],...
-    'FontSize',12,'HorizontalAlignment','left');
+% Mode popup: Direct / Inverse
+uicontrol('Style','text','Position',[10 260 120 20],'String','Mode');
+mode_menu = uicontrol('Style','popupmenu','Position',[130 260 150 20], ...
+    'String',{'Direct','Inverse'}, 'Callback',@modeChanged);
 
-% Animate button to run continuous motion
-animate_btn = uicontrol('Style','pushbutton','String','Animate',...
-    'Position',[10 200 270 30],'Callback',@toggleAnimation);
+% Checkbox: show alternate configuration
+show_alt_checkbox = uicontrol('Style','checkbox','Position',[10 230 270 20], ...
+    'String','Show alternate config','Value',1, ...
+    'Callback',@toggleAlt);
+
+% Checkbox: show P trajectory (for full crank rotation)
+traj_checkbox = uicontrol('Style','checkbox','Position',[10 210 270 20], ...
+    'String','Show P trajectory','Value',0, ...
+    'Callback',@updatePlot);
+
+% Text area for φ/theta/α & P coords
+angle_text = uicontrol('Style','text','Position',[10 180 300 20], ...
+    'FontSize',10,'HorizontalAlignment','left');
+
+% Animate button
+animate_btn = uicontrol('Style','pushbutton','String','Animate', ...
+    'Position',[10 140 270 30], 'Callback',@toggleAnimation);
 
 % Axes for drawing linkage
-ax = axes('Units','pixels','Position',[320 100 500 450]);
-axis equal; grid on;
+ax = axes('Units','pixels','Position',[320 100 550 450]);
+axis(ax,'equal'); grid(ax,'on'); hold(ax,'on');
 
-% Initial plot render
+% Initial draw
 updatePlot();
 
 % ---------------------------------------------------------------------
 % Nested callback functions and helpers
 % ---------------------------------------------------------------------
 
-    function toggleConfig(src, ~)
-        % TOGGLECONFIG - Flip linkage configuration (open vs crossed)
+    function toggleConfig(~,~)
         configState = -configState;
-        set(src, 'String', ['Config: ', ternary(configState==1, 'Open', 'Crossed')]);
-        updatePlot();
-    end
-
-    function toggleAlt(src, ~)
-        % TOGGLEALT - Show or hide the alternate kinematic solution
-        showAlternate = logical(get(src, 'Value'));
-        updatePlot();
-    end
-
-    function modeChanged(~, ~)
-        % MODECHANGED - Handle switch between direct & inverse kinematics
-        oldMode = modeState;
-        modeState = get(mode_menu, 'Value');
-        % Update angle label text based on mode
-        set(angle_label, 'String', ternary(modeState==1, 'Input angle θ (deg)', 'Output angle α (deg)'));
-
-        % Read current parameters
-        c = str2double(get(input_c,'String'));
-        b = str2double(get(input_b,'String'));
-        a = str2double(get(input_a,'String'));
-        d = str2double(get(input_d,'String'));
-        val_deg = str2double(get(input_angle,'String'));
-        angle_rad = deg2rad(val_deg);
-
-        % Attempt to preserve previous configuration across mode change
-        try
-            if oldMode == 1  % Direct → Inverse
-                [~, alpha, ~] = fourbar_direct_kinematics(c, b, a, d, angle_rad, configState);
-                new_val = rad2deg(alpha);
-            else            % Inverse → Direct
-                [theta, ~, ~] = fourbar_inverse_kinematics(c, b, a, d, angle_rad, configState);
-                new_val = rad2deg(theta);
-            end
-            set(input_angle, 'String', num2str(new_val));
-            set(angle_slider, 'Value', new_val);
-        catch
-            warning('Could not preserve linkage when switching modes.');
+        if configState == +1
+            set(toggle_btn,'String','Config: Open');
+        else
+            set(toggle_btn,'String','Config: Crossed');
         end
-
-        % Redraw with new mode
         updatePlot();
     end
 
-    function syncSlider(~, ~)
-        % SYNCSLIDER - Clamp edit box value and sync slider handle
+    function toggleAlt(~,~)
+        showAlternate = logical(get(show_alt_checkbox,'Value'));
+        updatePlot();
+    end
+
+    function modeChanged(~,~)
+        oldMode = modeState;
+        modeState = get(mode_menu,'Value');  % 1=Direct, 2=Inverse
+        try
+            % Preserve “angle” when switching modes
+            if oldMode == 1
+                % Direct→Inverse: get α from current theta
+                theta_curr = deg2rad(str2double(get(input_angle,'String')));
+                geo_val = readGeo();
+                [~, alpha_new, ~, ~] = fourbar_direct_kinematics(geo_val, theta_curr, configState);
+                new_deg = rad2deg(alpha_new);
+            else
+                % Inverse→Direct: get theta from current α
+                alpha_curr = deg2rad(str2double(get(input_angle,'String')));
+                geo_val = readGeo();
+                [theta_new, ~, ~, ~] = fourbar_inverse_kinematics(geo_val, alpha_curr, configState);
+                new_deg = rad2deg(theta_new);
+            end
+            set(input_angle,'String',num2str(new_deg));
+            set(angle_slider,'Value',new_deg);
+        catch
+            % If conversion fails, do nothing
+        end
+        updatePlot();
+    end
+
+    function syncSlider(~,~)
         val = str2double(get(input_angle,'String'));
-        % Ensure within slider bounds
-        val = max(min(val, get(angle_slider,'Max')), get(angle_slider,'Min'));
-        set(angle_slider, 'Value', val);
+        if isnan(val), return; end
+        val = max(min(val,180), -180);
+        set(input_angle,'String',num2str(val));
+        set(angle_slider,'Value',val);
         updatePlot();
     end
 
-    function syncEdit(src, ~)
-        % SYNCEDIT - Update edit box when slider moves
-        val = get(src, 'Value');
-        set(input_angle, 'String', num2str(val));
+    function syncAngleEdit(~,~)
+        val = get(angle_slider,'Value');
+        set(input_angle,'String',num2str(val));
         updatePlot();
     end
 
     function toggleAnimation(~,~)
-        % TOGGLEANIMATION - Toggle animation on/off
         animating = ~animating;
         if animating
-            set(animate_btn, 'String', 'Stop');
+            set(animate_btn,'String','Stop');
             runAnimation();
         else
-            set(animate_btn, 'String', 'Animate');
+            set(animate_btn,'String','Animate');
         end
     end
 
     function runAnimation()
-        % RUNANIMATION - Continuously animate input/output angle
-        c = str2double(get(input_c,'String'));
-        b = str2double(get(input_b,'String'));
-        a = str2double(get(input_a,'String'));
-        d = str2double(get(input_d,'String'));
-
-        range = computeFeasibleAngleRange(a, b, c, d, configState, modeState);
-        if isempty(range)
-            return;  % No valid motion if empty range
+        % Get the current angle from the edit‐box (in degrees)
+        start_deg = str2double(get(input_angle,'String'));
+        if isnan(start_deg)
+            animating = false;
+            return;
         end
 
-        angles = linspace(range(1), range(2), 200);  % Smooth animation steps
-
-        while animating && ishandle(f)
-            for val = angles
-                if ~animating || ~ishandle(f)
-                    break;
-                end
-                set(input_angle, 'String', num2str(val));
-                set(angle_slider, 'Value', val);
-                updatePlot();
-                drawnow;
-                pause(0.02);
-            end
+        % Compute feasible range in degrees for the current mode/config
+        geo_val = readGeo();
+        rng_deg = computeFeasibleAngleRange(geo_val, configState, modeState);
+        if isempty(rng_deg)
+            animating = false;
+            return;
         end
+
+        % Unpack the range
+        min_deg = rng_deg(1);
+        max_deg = rng_deg(2);
+
+        % Clamp start_deg into [min_deg, max_deg]
+        if start_deg < min_deg
+            start_deg = min_deg;
+        elseif start_deg > max_deg
+            start_deg = max_deg;
+        end
+
+        % Number of steps for each segment
+        N = 200;
+        % First segment: from current angle → max_deg
+        if max_deg > start_deg
+            angles1 = linspace(start_deg, max_deg, ceil(N * (max_deg - start_deg)/(max_deg - min_deg)));
+        else
+            angles1 = start_deg;
+        end
+        % Second segment: from min_deg → current angle
+        if start_deg > min_deg
+            angles2 = linspace(min_deg, start_deg, N - numel(angles1));
+        else
+            angles2 = [];
+        end
+
+        angles = [angles1, angles2];
+
+        % Loop through that custom ordering
+        for ang = angles
+            if ~animating || ~ishandle(f), break; end
+            set(input_angle,'String',num2str(ang));
+            set(angle_slider,'Value',ang);
+            updatePlot();
+            drawnow;
+            pause(0.02);
+        end
+
+        % Once finished (or interrupted), reset button text
+        if ishandle(animate_btn)
+            set(animate_btn,'String','Animate');
+        end
+        animating = false;
     end
+
 
     function updatePlot(~,~)
-        % UPDATEPLOT - Compute and draw linkage based on inputs
-        c = str2double(get(input_c,'String'));
-        b = str2double(get(input_b,'String'));
-        a = str2double(get(input_a,'String'));
-        d = str2double(get(input_d,'String'));
-        val_deg = str2double(get(input_angle,'String'));
-        angle_rad = deg2rad(val_deg);
-
-        % Determine valid range for motion (optional slider bounds)
-        range = computeFeasibleAngleRange(a, b, c, d, configState, modeState);
-        if isempty(range)
-            set(angle_text, 'String', 'No valid angles.');
-            cla(ax); return;
-        end
-        % Optionally set slider bounds here if desired
-        set(angle_slider, 'SliderStep', [1/360 10/360]);
-
+        cla(ax); hold(ax,'on');
         try
-            % Define ground pivot points
-            O = [0, 0];              % Origin pivot
-            C = [d, 0];              % Ground link end
+            geo_val   = readGeo();
 
-            % Compute kinematics based on mode
-            if modeState == 1  % Direct kinematics
-                theta = angle_rad;
-                [phi, alpha, A] = fourbar_direct_kinematics(c, b, a, d, theta, configState);
-                B = C + c * [cos(theta), sin(theta)];
+            %— Plot trajectory of P if requested —
+            if get(traj_checkbox,'Value')
+                thetas = linspace(0, 2*pi, 360);
+                P_traj = nan(2, numel(thetas));
                 if showAlternate
-                    [~, ~, A_alt] = fourbar_direct_kinematics(c, b, a, d, theta, -configState);
-                    B_alt = C + c * [cos(theta), sin(theta)];
+                    P_traj_alt = nan(2, numel(thetas));
                 end
-            else  % Inverse kinematics
-                alpha = angle_rad;
-                [theta, phi, A] = fourbar_inverse_kinematics(c, b, a, d, alpha, configState);
-                B = C + c * [cos(theta), sin(theta)];
+                for ii = 1:numel(thetas)
+                    try
+                        [~, ~, ~, P_temp] = fourbar_direct_kinematics(geo_val, thetas(ii), configState);
+                        P_traj(:,ii) = P_temp(:);
+                    catch
+                        % skip invalid positions
+                    end
+                    if showAlternate
+                        try
+                            [~, ~, ~, P_temp_alt] = fourbar_direct_kinematics(geo_val, thetas(ii), -configState);
+                            P_traj_alt(:,ii) = P_temp_alt(:);
+                        catch
+                            % skip invalid positions
+                        end
+                    end
+                end
+                % Current‐config trajectory
+                plot(ax, P_traj(1,:), P_traj(2,:), 'k:', 'LineWidth',1);
+                % Alternate‐config trajectory (if showing alternate)
                 if showAlternate
-                    [theta_alt, ~, A_alt] = fourbar_inverse_kinematics(c, b, a, d, alpha, -configState);
-                    B_alt = C + c * [cos(theta_alt), sin(theta_alt)];
+                    plot(ax, P_traj_alt(1,:), P_traj_alt(2,:), 'k--', 'LineWidth',1);
                 end
             end
 
-            % Clear and hold axes for new plot
-            cla(ax); hold(ax, 'on');
+            angle_deg = str2double(get(input_angle,'String'));
+            angle_rad = deg2rad(angle_deg);
 
-            % Plot main linkage lines
-            plot(ax, [O(1) A(1)], [O(2) A(2)], 'r-', 'LineWidth', 2);
-            plot(ax, [A(1) B(1)], [A(2) B(2)], 'g-', 'LineWidth', 2);
-            plot(ax, [B(1) C(1)], [B(2) C(2)], 'b-', 'LineWidth', 2);
-            % Draw ground symbols at O and C
-            drawGroundSymbol(ax, O, C);
-            % Plot joint markers
-            plot(ax, [O(1), A(1), B(1), C(1)], [O(2), A(2), B(2), C(2)], 'ko', 'MarkerFaceColor', 'k');
-
-            % Plot alternate configuration if enabled
-            if showAlternate
-                plot(ax, [O(1) A_alt(1)], [O(2) A_alt(2)], 'r--', 'LineWidth', 1.5);
-                plot(ax, [A_alt(1) B_alt(1)], [A_alt(2) B_alt(2)], 'g--', 'LineWidth', 1.5);
-                plot(ax, [B_alt(1) C(1)], [B_alt(2) C(2)], 'b--', 'LineWidth', 1.5);
-                plot(ax, [O(1), A_alt(1), B_alt(1), C(1)], [O(2), A_alt(2), B_alt(2), C(2)], ...
-                    'ko', 'MarkerFaceColor', [0.5 0.5 0.5]);
-            end
-
-            % Set axes limits and title
-            xlim(ax, [-200 200]); ylim(ax, [-150 150]);
-            title(ax, 'Four-Bar Linkage');
-
-            % Update text info based on mode
             if modeState == 1
-                str = sprintf('Coupler angle φ: %.2f°\nOutput angle α: %.2f°', ...
-                    rad2deg(phi), rad2deg(alpha));
+                % Direct kinematics
+                [phi, alpha, A, P] = fourbar_direct_kinematics(geo_val, angle_rad, configState);
+                theta = angle_rad;
+                B = [geo_val(4), 0] + geo_val(3)*[cos(theta), sin(theta)];
+                if showAlternate
+                    [~, ~, A_alt, P_alt] = fourbar_direct_kinematics(geo_val, theta, -configState);
+                    B_alt = [geo_val(4), 0] + geo_val(3)*[cos(theta), sin(theta)];
+                end
             else
-                str = sprintf('Coupler angle φ: %.2f°\nInput angle θ: %.2f°', ...
-                    rad2deg(phi), rad2deg(theta));
+                % Inverse kinematics
+                alpha = angle_rad;
+                [theta, phi, A, P] = fourbar_inverse_kinematics(geo_val, alpha, configState);
+                B = [geo_val(4), 0] + geo_val(3)*[cos(theta), sin(theta)];
+                if showAlternate
+                    [theta_alt, ~, A_alt, P_alt] = fourbar_inverse_kinematics(geo_val, alpha, -configState);
+                    B_alt = [geo_val(4), 0] + geo_val(3)*[cos(theta_alt), sin(theta_alt)];
+                end
             end
-            set(angle_text, 'String', str);
+
+            %— Draw the filled triangular “coupler body” (A–B–P) in translucent green —
+            patch( ...
+                'XData',[A(1), B(1), P(1)], ...
+                'YData',[A(2), B(2), P(2)], ...
+                'FaceColor','g', ...
+                'EdgeColor','none', ...
+                'FaceAlpha',0.5, ...
+                'Parent',ax ...
+                );
+
+            %— Draw ground link O–C —
+            O = [0, 0];
+            C = [geo_val(4), 0];
+            plot(ax, [O(1), C(1)], [O(2), C(2)], 'k-', 'LineWidth',2);
+
+            %— Draw current-config links (on top of the patch) —
+            plot(ax, [O(1), A(1)], [O(2), A(2)], 'r-', 'LineWidth',2);   % Outlink O→A
+            plot(ax, [A(1), B(1)], [A(2), B(2)], 'g-', 'LineWidth',2);   % Coupler B→A
+            plot(ax, [B(1), C(1)], [B(2), C(2)], 'b-', 'LineWidth',2);   % Crank C→B
+
+            %— Plot joints as filled circles —
+            scatter(ax, [O(1), A(1), B(1), C(1)], [O(2), A(2), B(2), C(2)], 40, 'k','filled');
+
+            %— Plot point P (black “×”) —
+            plot(ax, P(1), P(2), 'kx', 'MarkerSize',8, 'LineWidth',2);
+
+            %— Plot alternate-config triangle and links if requested —
+            if showAlternate
+                patch( ...
+                    'XData',[A_alt(1), B_alt(1), P_alt(1)], ...
+                    'YData',[A_alt(2), B_alt(2), P_alt(2)], ...
+                    'FaceColor','g', ...
+                    'EdgeColor','none', ...
+                    'FaceAlpha',0.3, ...
+                    'Parent',ax ...
+                    );
+                plot(ax, [O(1), A_alt(1)], [O(2), A_alt(2)], 'r--', 'LineWidth',1.5);
+                plot(ax, [A_alt(1), B_alt(1)], [A_alt(2), B_alt(2)], 'g--', 'LineWidth',1.5);
+                plot(ax, [B_alt(1), C(1)], [B_alt(2), C(2)], 'b--', 'LineWidth',1.5);
+                scatter(ax, [A_alt(1), B_alt(1)], [A_alt(2), B_alt(2)], 30, 'k','filled');
+                plot(ax, P_alt(1), P_alt(2), 'g+', 'MarkerSize',8, 'LineWidth',1.5);
+            end
+
+            %— Draw tiny ground symbols at O and C —
+            drawGroundSymbol(ax, O, C);
+
+            %— Auto-scale axes —
+            Lmax = max(geo_val(1:4)) * 1.3;
+            axis(ax, [-Lmax Lmax -Lmax Lmax]);
+
+            %— Display textual readout —
+            if modeState == 1
+                txt = sprintf('φ = %.1f°   α = %.1f°   P = (%.2f, %.2f)', ...
+                    rad2deg(phi), rad2deg(alpha), P(1), P(2));
+            else
+                txt = sprintf('θ = %.1f°   φ = %.1f°   P = (%.2f, %.2f)', ...
+                    rad2deg(theta), rad2deg(phi), P(1), P(2));
+            end
+            set(angle_text,'String',txt);
 
         catch ME
-            % Handle unreachable configurations
+            % Invalid/unreachable → show error
             cla(ax);
-            text(0.2, 0.5, 'Configuration not possible', 'Parent', ax, ...
-                'Color', 'r', 'FontSize', 14);
-            set(angle_text, 'String', ME.message);
+            text(0,0,'Unreachable','Parent',ax,'Color','r','FontSize',14,'HorizontalAlignment','center');
+            set(angle_text,'String',ME.message);
         end
     end
-end
 
-% Helper: draw ground link symbols at two pivot points
 
-function drawGroundSymbol(ax, P1, P2)
-for P = [P1; P2]'
-    drawSymbolAt(ax, P);
-end
-end
-
-function drawSymbolAt(ax, jointCenter)
-numLines = 3;   % Number of short lines
-lineLength = 10; lineSpacing = 5;
-angle = pi/4;   % Tilt of ground symbol lines
-R = [cos(angle+pi), -sin(angle+pi); sin(angle+pi), cos(angle+pi)];
-v = [lineLength; 0]; vR = R * v;
-for i = 0:numLines-1
-    offset = jointCenter + [i*lineSpacing - (numLines-1)/2*lineSpacing; 0];
-    endPt = offset + vR;
-    plot(ax, [offset(1), endPt(1)], [offset(2), endPt(2)], 'k', 'LineWidth', 1.5);
-end
-plot(ax, jointCenter(1) + [-(numLines-1)/2*lineSpacing, (numLines-1)/2*lineSpacing], ...
-    [jointCenter(2), jointCenter(2)], 'k', 'LineWidth', 1.5);
-end
-
-% Helper: compute workspace of the linkage for direct and inverse modes
-
-function range = computeFeasibleAngleRange(a, b, c, d, config, mode)
-% COMPUTEFEASIBLERANGER - Determine valid motion range of input/output
-angle_vals = linspace(0, 2*pi, 361);
-valid = false(size(angle_vals));
-for i = 1:length(angle_vals)
-    try
-        if mode == 1
-            fourbar_direct_kinematics(c, b, a, d, angle_vals(i), config);
-        else
-            fourbar_inverse_kinematics(c, b, a, d, angle_vals(i), config);
-        end
-        valid(i) = true;
-    catch
-        valid(i) = false;
+    function geo_out = readGeo()
+        % READGEO  Read [a b c d e epsilon] from GUI fields
+        a_val       = str2double(get(input_a,'String'));
+        b_val       = str2double(get(input_b,'String'));
+        c_val       = str2double(get(input_c,'String'));
+        d_val       = str2double(get(input_d,'String'));
+        e_val       = str2double(get(input_e,'String'));
+        eps_deg_val = str2double(get(input_epsilon,'String'));
+        epsilon_val = deg2rad(eps_deg_val);  % convert to radians
+        geo_out = [a_val, b_val, c_val, d_val, e_val, epsilon_val];
     end
-end
-degs = rad2deg(angle_vals(valid));
-if isempty(degs)
-    range = [];
-else
-    range = [min(degs), max(degs)];
-end
-end
 
-% Helper: misc
+    function drawGroundSymbol(axh, O_pt, C_pt)
+        % Draw small “L” shapes at O and C
+        Ls = max(get(axh,'XLim')) * 0.02;
+        plot(axh, [O_pt(1)-Ls, O_pt(1)+Ls], [O_pt(2), O_pt(2)], 'k-', 'LineWidth',2);
+        plot(axh, [O_pt(1), O_pt(1)], [O_pt(2)-Ls, O_pt(2)+Ls], 'k-', 'LineWidth',2);
+        plot(axh, [C_pt(1)-Ls, C_pt(1)+Ls], [C_pt(2), C_pt(2)], 'k-', 'LineWidth',2);
+        plot(axh, [C_pt(1), C_pt(1)], [C_pt(2)-Ls, C_pt(2)+Ls], 'k-', 'LineWidth',2);
+    end
 
-function out = ternary(cond, a, b)
-% TERNARY - Simple conditional helper
-if cond, out = a; else, out = b; end
+    function rng_deg = computeFeasibleAngleRange(geo_val, cfg, md)
+        % COMPUTEFEASIBLEANGLERANGE  Returns [min,max] in degrees for theta or α
+        try
+            a_len = geo_val(1);
+            b_len = geo_val(2);
+            c_len = geo_val(3);
+            d_len = geo_val(4);
+
+            if md == 1
+                % Direct: vary theta ∈ [–π,π]
+                thetas = linspace(-pi, pi, 361);
+                valid_th = false(size(thetas));
+                for i = 1:numel(thetas)
+                    try
+                        fourbar_direct_kinematics(geo_val, thetas(i), cfg);
+                        valid_th(i) = true;
+                    catch
+                        valid_th(i) = false;
+                    end
+                end
+                if ~any(valid_th), rng_deg = []; return; end
+                ths = thetas(valid_th);
+                rng_deg = [rad2deg(min(ths)), rad2deg(max(ths))];
+            else
+                % Inverse: vary α ∈ [–π,π]
+                alphas = linspace(-pi, pi, 361);
+                valid_al = false(size(alphas));
+                for i = 1:numel(alphas)
+                    try
+                        fourbar_inverse_kinematics(geo_val, alphas(i), cfg);
+                        valid_al(i) = true;
+                    catch
+                        valid_al(i) = false;
+                    end
+                end
+                if ~any(valid_al), rng_deg = []; return; end
+                als = alphas(valid_al);
+                rng_deg = [rad2deg(min(als)), rad2deg(max(als))];
+            end
+        catch
+            rng_deg = [];
+        end
+    end
+
 end
