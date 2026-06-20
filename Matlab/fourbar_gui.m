@@ -26,432 +26,772 @@ function fourbar_gui()
 %
 % Code provided under GNU Affero General Public License v3.0
 
-% ---------------------------------------------------------------------
-% INITIALIZATION
-% ---------------------------------------------------------------------
-
-%— Default geometry/state —
-default = struct(...
-    'a', 81, ...               % output link O→A
-    'b', 88, ...               % coupler B→A
-    'c', 92, ...               % input crank C→B
-    'd', 151, ...              % ground link O→C
-    'e', 80, ...                % distance A→P along coupler
-    'epsilon', pi/6, ...          % ε in radians (converted from degrees)
-    'angle_deg', 106, ...      % initial theta (if Direct) or α (if Inverse) in degrees
-    'config', -1 ...           % –1 = crossed, +1 = open
-    );
-
-%— GUI state flags —
-configState   = default.config;  % +1=open, –1=crossed
-modeState     = 1;               % 1=Direct, 2=Inverse
-showAlternate = true;            % show alternate config?
-animating     = false;           % animation on/off
 
 % ---------------------------------------------------------------------
 % GUI COMPONENTS
 % ---------------------------------------------------------------------
 
 %— Create figure & controls —
-f = figure('Name','Four-Bar Linkage GUI','Position',[300 100 900 600]);
+hFig = figure('Name','Four-Bar Linkage GUI','NumberTitle','off', ...
+    'MenuBar','none','ToolBar','figure','Position',[300 100 900 600]);
 
-% a (output link)
-uicontrol('Style','text','Position',[10 550 120 20],'String','a (O→A)');
-input_a = uicontrol('Style','edit','Position',[130 550 150 20], ...
-    'String',num2str(default.a), 'Callback',@updatePlot);
+% Custom menu bar
+hMenuFig = gcf;
 
-% b (coupler)
-uicontrol('Style','text','Position',[10 520 120 20],'String','b (B→A)');
-input_b = uicontrol('Style','edit','Position',[130 520 150 20], ...
-    'String',num2str(default.b), 'Callback',@updatePlot);
+% Define callback selection helpers for uifigure vs. classic figure
+isUIFigure = isa(hMenuFig, 'matlab.ui.Figure');
+if isUIFigure
+    parentProp = 'Text';
+    cbProp = 'MenuSelectedFcn';
+else
+    parentProp = 'Label';
+    cbProp = 'Callback';
+end
 
-% c (input crank)
-uicontrol('Style','text','Position',[10 490 120 20],'String','c (C→B)');
-input_c = uicontrol('Style','edit','Position',[130 490 150 20], ...
-    'String',num2str(default.c), 'Callback',@updatePlot);
+% Create top-level menus only if none exist yet
+existingMenus = findall(hMenuFig, 'Type','uimenu','-depth',1);
+if isempty(existingMenus)
+    % ---- Top level ----
+    mFile    = uimenu(hMenuFig, parentProp,'File');
+    mEdit    = uimenu(hMenuFig, parentProp,'Edit');
+    mView    = uimenu(hMenuFig, parentProp,'View');
+    mOptions = uimenu(hMenuFig, parentProp,'Options');
+    mHelp    = uimenu(hMenuFig, parentProp,'Help');
 
-% d (ground link)
-uicontrol('Style','text','Position',[10 460 120 20],'String','d (O→C)');
-input_d = uicontrol('Style','edit','Position',[130 460 150 20], ...
-    'String',num2str(default.d), 'Callback',@updatePlot);
+    % ---- File submenus ----
+    uimenu(mFile, parentProp,'Open',            cbProp,@(~,~) cbOpen(hMenuFig));
+    uimenu(mFile, parentProp,'Save',            cbProp,@(~,~) cbSave(hMenuFig));
+    uimenu(mFile, parentProp,'Export PNG',      cbProp,@(~,~) cbExportPNG(hMenuFig));
+    uimenu(mFile, parentProp,'Export EPS+PDF',  cbProp,@(~,~) cbExportEPSPDF(hMenuFig));
+    uimenu(mFile, parentProp,'Print',           cbProp,@(~,~) cbPrint(hMenuFig));
+    uimenu(mFile, parentProp,'Exit',            cbProp,@(~,~) cbExit(hMenuFig));
 
-% e (distance A→P)
-uicontrol('Style','text','Position',[10 430 120 20],'String','e = |A–P|');
-input_e = uicontrol('Style','edit','Position',[130 430 150 20], ...
-    'String',num2str(default.e), 'Callback',@updatePlot);
+    % ---- View submenus ----
+    uimenu(mView, parentProp,'Reset View',      cbProp,@(~,~) cbResetView(hMenuFig));
 
-% ε (angle from coupler‐extension, in degrees)
-uicontrol('Style','text','Position',[10 400 120 20],'String','ε (deg)');
-input_epsilon = uicontrol('Style','edit','Position',[130 400 150 20], ...
-    'String',num2str(rad2deg(default.epsilon)), 'Callback',@updatePlot);
+    % ---- Options submenus ----
+    uimenu(mOptions, parentProp,'Preferences',  cbProp,@(~,~) cbPreferences(hMenuFig));
+end
 
-% Angle (theta if Direct, α if Inverse), in degrees
-uicontrol('Style','text','Position',[10 370 120 20],'String','Angle (°)');
-input_angle = uicontrol('Style','edit','Position',[130 370 150 20], ...
-    'String',num2str(default.angle_deg), 'Callback',@syncSlider);
 
-% Slider for angle
-angle_slider = uicontrol('Style','slider','Position',[10 340 270 20], ...
-    'Min',-180,'Max',180,'Value',default.angle_deg, ...
-    'Callback',@syncAngleEdit);
+% ---- Callback implementations ----
+    function cbOpen(hFig)
+        % Open a MATLAB .mat file created by cbSave and update the GUI.
+        [f,p] = uigetfile({'*.mat','MAT-file (*.mat)'}, 'Open Data File');
+        if isequal(f,0), return; end
+        full = fullfile(p,f);
 
-% Toggle configuration button
-toggle_btn = uicontrol('Style','togglebutton','String','Config: Crossed', ...
-    'Position',[10 300 270 30], 'Callback',@toggleConfig);
+        s = load(full, '-mat');
+        if ~isfield(s,'data')
+            error('Selected file does not contain a variable named ''data''.');
+        end
+        data = s.data;
 
-% Mode popup: Direct / Inverse
-uicontrol('Style','text','Position',[10 260 120 20],'String','Mode');
-mode_menu = uicontrol('Style','popupmenu','Position',[130 260 150 20], ...
-    'String',{'Direct','Inverse'}, 'Callback',@modeChanged);
+        % ----- Store 'data' back into the GUI state (guidata/appdata) -----
+        didStore = false;
 
-% Checkbox: show alternate configuration
-show_alt_checkbox = uicontrol('Style','checkbox','Position',[10 230 270 20], ...
-    'String','Show alternate config','Value',1, ...
-    'Callback',@toggleAlt);
+        gd = guidata(hFig);
+        if isstruct(gd) && isfield(gd,'data')
+            gd.data = data;
+            guidata(hFig, gd);
+            didStore = true;
+        elseif isstruct(gd)
+            gd.data = data;
+            guidata(hFig, gd);
+            didStore = true;
+        end
+        if ~didStore
+            setappdata(hFig,'data', data);
+            didStore = true;
+        end
+        if ~didStore
+            set(hFig,'UserData', data);
+        end
+
+        localApplyDataToGUI(hFig, data);
+
+    end
+
+    function localApplyDataToGUI(hFig, data)
+        % Recursively apply fields of 'data' to UI components whose Tag matches fields.
+        if ~isstruct(data)
+            return;
+        end
+        fns = fieldnames(data);
+        for k = 0:numel(fns)-1
+            fn = fns{k+1};
+            val = data.(fn);
+
+            % Recurse into sub-structs
+            if isstruct(val)
+                localApplyDataToGUI(hFig, val);
+                continue;
+            end
+
+            % Try to find an object with Tag = field name
+            obj = findobj(hFig, '-depth', 10, 'Tag', fn); % supports classic figure/uifigure
+
+            if isempty(obj)
+                continue;
+            end
+
+            % Try to set Value/String/Checked/Items sensibly
+            for h = transpose(obj(:))
+                didSet = false;
+                if isnumeric(val) || islogical(val)
+                    set(h, 'Value', val);  % preferred for modern controls
+                    didSet = true;
+                end
+                if ~didSet
+                    if isstring(val) || ischar(val)
+                        set(h, 'Value', char(val));  % uifigure edit fields, etc.
+                        didSet = true;
+                    end
+                end
+
+                if ~didSet
+                    if isstring(val) || ischar(val) || isnumeric(val) || islogical(val)
+                        if ~ischar(val) && ~isstring(val)
+                            sval = mat2str(val);
+                        else
+                            sval = char(val);
+                        end
+                        set(h, 'String', sval);      % classic uicontrols
+                        didSet = true;
+                    end
+                end
+
+                if ~didSet && (islogical(val) || (isnumeric(val) && isscalar(val)))
+                    set(h, 'Checked', ternary(val,'on','off')); %#ok<*UNRCH>
+                    didSet = true;
+                end
+
+                if ~didSet && (isstring(val) || ischar(val))
+                    items = get(h,'Items');
+                    if iscell(items) && any(strcmp(items, char(val)))
+                        set(h,'Value', char(val));   % dropdown / listbox items
+                        didSet = true;
+                    end
+                end
+            end
+        end
+    end
+
+    function cbSave(hFig)
+        % Save a MATLAB .mat file containing the 'data' structure.
+        [f,p] = uiputfile({'*.mat','MAT-file (*.mat)'}, 'Save Data As', 'fourbar_session.mat');
+        if isequal(f,0), return; end
+        target = fullfile(p,f);
+
+        % --- Try to obtain the 'data' structure from common stores ---
+        data = [];
+        gd = guidata(hFig);
+        if isstruct(gd) && isfield(gd,'data')
+            data = gd.data;            % case: guidata has a field 'data'
+        elseif isstruct(gd)
+            data = gd;                 % case: guidata itself is the data struct
+        end
+
+        % Saving geometry as values
+        for ii = 1:numel(data.geoEd)
+            g(ii) = str2double(get(data.geoEd(ii),'String'));
+        end
+        data.geo=g;
+
+        warning('off', 'MATLAB:save:SavingFigure');
+
+        % Write MAT file compatible with MATLAB
+        save(target, 'data', '-mat');
+
+        %localInfoAlert(hFig, sprintf('Saved MATLAB data to:\n%s', target), 'Save');
+    end
+
+    function cbExportPNG(hFig)
+        % Export current figure to PNG (vector formats may vary across versions)
+        [f,p] = uiputfile({'*.png','PNG Image (*.png)'}, 'Export As');
+        if isequal(f,0), return; end
+        target = fullfile(p,f);
+        if exist('exportgraphics','file')
+            exportgraphics(hFig, target); % export full figure
+
+        else
+            % Fallback for older MATLAB: use print
+            print(hFig, '-dpng', '-r300', target);
+        end
+
+        %localInfoAlert(hFig, sprintf('Exported to: %s', target), 'Export');
+    end
+
+    function cbExportEPSPDF(hFig)
+        % Export current figure to EPS and PDF
+        [f,p] = uiputfile({'*.eps','EPS Vector (*.eps)'}, 'Export As');
+        if isequal(f,0), return; end
+        target = fullfile(p,f);
+        if exist('exportgraphics','file')
+            exportgraphics(hFig, target); % export full figure
+        else
+            % Fallback for older MATLAB: use print
+            print(hFig, '-depsc', '-r300', target);
+        end
+        %localInfoAlert(hFig, sprintf('Exported to: %s', target), 'Export');
+        unix(strcat(['epstopdf ',target]));
+    end
+
+    function cbPrint(hFig)
+        printdlg(hFig);
+    end
+
+    function cbExit(hFig)
+        choice = questdlg('Are you sure you want to exit?', 'Exit', ...
+            'Yes','No','No');
+        if strcmp(choice,'Yes')
+            close(hFig);
+        end
+    end
+
+    function cbResetView(hFig)
+        ax = findall(hFig,'Type','axes');
+        for k = 1:numel(ax)
+            try
+                axis(ax(k),'auto');
+            catch, end
+
+            % Optional: reset zoom/pan
+            try, zoom(ax(k),'out'); catch, end
+        end
+        drawnow;
+        %localInfoAlert(hFig, 'View has been reset.', 'Reset View');
+    end
+
+    function cbPreferences(hFig)
+        % Simple Preferences placeholder: toggle grid on all axes
+        ax = findall(hFig,'Type','axes');
+        if isempty(ax)
+            %localInfoAlert(hFig,'No axes found to configure.','Preferences');
+            return;
+        end
+
+        % Determine majority grid state across axes
+        states = get(ax,'XGrid'); % char for single handle, or cellstr for multiple
+        if ischar(states)
+            states = {states};
+        end
+        oncount = sum(strcmp(states,'on'));
+        if oncount >= numel(ax)/2
+            % Majority ON -> switch OFF
+            newState = 'off';
+        else
+            % Majority OFF -> switch ON
+            newState = 'on';
+        end
+
+        for k = 1:numel(ax)
+            try
+                grid(ax(k), newState);
+            catch
+                % Fallback for older MATLAB versions
+                if strcmpi(newState,'on')
+                    grid(ax(k),'on');
+                else
+                    grid(ax(k),'off');
+                end
+            end
+        end
+
+        %localInfoAlert(hFig, sprintf('Grid turned %s for %d axes.', newState, numel(ax)), 'Preferences');
+    end
+
+
+%------------------------------------------------------
+% Geometry Panel
+%------------------------------------------------------
+uipanel('Title','Geometry', ...
+    'FontSize',10, ...
+    'Position',[0.02 0.77 0.33 0.21]);
+
+uipanel('Title','Geometry', ...
+    'FontSize',10, ...
+    'Position',[0.02 0.77 0.33 0.21]);
+
+% a,b,c,d,e,h,eta labels and edit boxes
+txtX = 0.021;  wX = 0.07;  hX = 0.03;  dy = 0.04;  sy = 0.91;
+names = {'a (O→A)','b (A→B)','c (B→C)','d (O→C)','e (A→P)', 'ϵ (BAP, deg)', 'δ (xOC, deg)'};
+for k = 1:4
+    uicontrol('Style','text', ...
+        'Units','normalized', ...
+        'Position',[txtX sy-(k-1)*dy wX hX], ...
+        'String',names{k}, ...
+        'HorizontalAlignment','right');
+    geoEd(k) = uicontrol('Style','edit', ...
+        'Units','normalized', ...
+        'Position',[txtX+wX+0.01 sy-(k-1)*dy wX hX], ...
+        'String','0','Callback',@updatePlot);
+end
+for k = 5:7
+    uicontrol('Style','text', ...
+        'Units','normalized', ...
+        'Position',[0.17+txtX sy-(k-5)*dy wX hX], ...
+        'String',names{k}, ...
+        'HorizontalAlignment','right');
+    geoEd(k) = uicontrol('Style','edit', ...
+        'Units','normalized', ...
+        'Position',[0.17+txtX+wX+0.01 sy-(k-5)*dy wX hX], ...
+        'String','0','Callback',@updatePlot);
+end
+
+% Preload some default geometry
+set(geoEd(1),'String','0.81');  % a
+set(geoEd(2),'String','0.88');  % b
+set(geoEd(3),'String','0.92');  % c
+set(geoEd(4),'String','1.51');  % d
+set(geoEd(5),'String','0.80');  % e
+set(geoEd(6),'String','30');  % epsilon = pi/6
+set(geoEd(7),'String','-10');  % delta = -10*pi/180
+%set(geoEd(6),'String','0.5236');  % epsilon = pi/6
+%set(geoEd(7),'String','-0.1745');  % delta = -10*pi/180
+
+
+%------------------------------------------------------
+% Mode Selection (Direct / Inverse)
+%------------------------------------------------------
+uipanel('Title','Mode','FontSize',10, ...
+    'Position',[0.02 0.67 0.33 0.10]);
+modeBtn = uibuttongroup('Units','normalized', ...
+    'Position',[0.02 0.68 0.33 0.06], ...
+    'SelectionChangedFcn',@modeChanged);
+rad1 = uicontrol(modeBtn,'Style','radiobutton','String','Direct', ...
+    'Units','normalized','Position',[0.05 0.10 0.4 0.8]);
+rad2 = uicontrol(modeBtn,'Style','radiobutton','String','Inverse', ...
+    'Units','normalized','Position',[0.50 0.10 0.4 0.8]);
+modeBtn.SelectedObject = rad1;  % default: Direct
+
+
+%------------------------------------------------------
+% Direct Mode Controls
+%------------------------------------------------------
+directPanel = uipanel('Title','Direct Mode Slider','FontSize',10, ...
+    'Position',[0.02 0.59 0.33 0.08], ...
+    'Visible','on');
+uicontrol('Parent',directPanel,'Style','text','Units','normalized', ...
+    'Position',[0.04 0.25 0.1 0.6],'String','θ','HorizontalAlignment','left');
+thetaSlider = uicontrol('Parent',directPanel,'Style','slider', ...
+    'Units','normalized','Position',[0.10 0.25 0.75 0.7], ...
+    'Min',-180,'Max',180,'Value',106,'SliderStep', [0.01/7.2, 0.1/7.2],...
+    'Callback',@updatePlot);
+thetaValTxt = uicontrol('Parent',directPanel,'Style','edit', ...
+    'Units','normalized','Position',[0.88 0.25 0.1 0.6], ...
+    'BackgroundColor',[1 1 1], ...
+    'String',num2str(get(thetaSlider,'Value')),'HorizontalAlignment','left', ...
+    'Callback',@cbThetaEdit);
+
+%------------------------------------------------------
+% Inverse Mode Controls
+%------------------------------------------------------
+inversePanel = uipanel('Title','Inverse Mode Slider','FontSize',10, ...
+    'Position',[0.02 0.50 0.33 0.08], ...
+    'Visible','on');
+uicontrol('Parent',inversePanel,'Style','text','Units','normalized', ...
+    'Position',[0.04 0.25 0.1 0.6],'String','α','HorizontalAlignment','left');
+alphaSlider = uicontrol('Parent',inversePanel,'Style','slider','Units','normalized', ...
+    'Position',[0.10 0.25 0.75 0.7],'Min',-180,'Max',180,'Value',120,'SliderStep', [0.01/7.2, 0.1/7.2],...
+    'Callback',@updatePlot);
+alphaValTxt = uicontrol('Parent',inversePanel,'Style','edit', ...
+    'Units','normalized','Position',[0.88 0.25 0.1 0.6], ...
+    'BackgroundColor',[1 1 1], ...
+    'String',num2str(get(alphaSlider,'Value')),'HorizontalAlignment','left', ...
+    'Callback',@cbAlphaEdit);
+
+% Start in Direct mode: disable the Inverse controls
+set(alphaSlider, 'Enable','off');
+set(alphaValTxt,'Enable','off');
+
+% Checkbox: display solutions
+solsPanel = uipanel('Title','Display solutions:','FontSize',10, ...
+    'Position',[0.02 0.42 0.33 0.08], ...
+    'Visible','on');
+for i=1:2
+    sols_checkbox(i) = uicontrol('Parent',solsPanel,'Units','normalized','Style','checkbox','Position',[0.2+0.2*i 0.3 0.7 0.6], ...
+        'String',num2str(i),'Value',1,'Callback',@updatePlot);
+end
+
+% Define color schemes
+colors = [1 0 0;0 0 1];
 
 % Checkbox: show P trajectory (for full crank rotation)
-traj_checkbox = uicontrol('Style','checkbox','Position',[10 210 270 20], ...
+traj_checkbox = uicontrol('Style','checkbox','Position',[20 230 270 20], ...
     'String','Show P trajectory','Value',0, ...
     'Callback',@updatePlot);
 
-% Text area for φ/theta/α & P coords
-angle_text = uicontrol('Style','text','Position',[10 180 300 20], ...
-    'FontSize',10,'HorizontalAlignment','left');
-
 % Animate button
 animate_btn = uicontrol('Style','pushbutton','String','Animate', ...
-    'Position',[10 140 270 30], 'Callback',@toggleAnimation);
+    'Position',[20 200 295 30], 'Callback',@toggleAnimation);
 
-% Axes for drawing linkage
+% Text area for φ/theta/α & P coords
+info_text = uicontrol('Style','text','Position',[20 100 295 100], ...
+    'FontSize',10,'HorizontalAlignment','left');
+
+
+% Axes for plotting
+%------------------------------------------------------
 ax = axes('Units','pixels','Position',[320 100 550 450]);
-axis(ax,'equal'); grid(ax,'on'); hold(ax,'on');
+axis equal
+grid on
+xlabel('X'); ylabel('Y');
+title('Four-Bar Linkage');
+xlim([-1 1.4]*1.2);
+ylim([-1.2 1.2]*1.2);
+hold(ax,'on');
+
+%------------------------------------------------------
+% Data storage (use guidata)
+%------------------------------------------------------
+data.name          = 'Fourbar Linkage';
+data.version       = 0.9;
+data.geoEd         = geoEd;
+data.modeBtn       = modeBtn;
+data.directPanel   = directPanel;
+data.inversePanel  = inversePanel;
+data.thetaSl       = thetaSlider;
+data.thetaTxt      = thetaValTxt;
+data.alphaSl       = alphaSlider;
+data.alphaTxt      = alphaValTxt;
+data.sols_checkbox = sols_checkbox;
+data.colors        = colors;
+data.animateFlag   = false;
+data.timerObj      = [];
+data.animateBtn    = animate_btn;
+data.th_offset     = get(thetaSlider,'Value');
+data.alph_offset   = get(alphaSlider,'Value');
+data.info_text     = info_text;
+data.ax            = ax;
+guidata(hFig,data);
+
+% Store fixed axis limits in data
+data.limits = [get(ax,'XLim'), get(ax,'YLim')];
+guidata(hFig,data);
 
 % Initial draw
-updatePlot();
+updatePlot([],[]);
 
 % ---------------------------------------------------------------------
 % Nested callback functions and helpers
 % ---------------------------------------------------------------------
 
-    function toggleConfig(~,~)
-        configState = -configState;
-        if configState == +1
-            set(toggle_btn,'String','Config: Open');
-        else
-            set(toggle_btn,'String','Config: Crossed');
+    function cbThetaEdit(~,~)
+        % Pull GUI data
+        data = guidata(hFig);
+
+        % Pull modified theta value
+        theta = str2num(get(data.thetaTxt,'String'));
+
+        % Push to slider
+        set(data.thetaSl,'Value',theta);
+
+        % Redraw
+        updatePlot([], []);
+    end
+
+
+    function cbAlphaEdit(~,~)
+        % Pull GUI data
+        data = guidata(hFig);
+
+        % Pull modified theta value
+        alpha = str2num(get(data.alphaTxt,'String'));
+
+        % Push to slider
+        set(data.alphaSl,'Value',alpha);
+
+        % Redraw
+        updatePlot([], []);
+    end
+
+
+
+    function modeChanged(~, event)
+        data = guidata(hFig);
+
+        % First, always grab the current geometry vector (g)
+        g = zeros(1,7);
+        for ii = 1:7
+            g(ii) = str2double( get(data.geoEd(ii), 'String') );
         end
-        updatePlot();
-    end
+        % Conversion to radians from the input values in degrees
+        g(6)=deg2rad(g(6));
+        g(7)=deg2rad(g(7));
 
-    function toggleAlt(~,~)
-        showAlternate = logical(get(show_alt_checkbox,'Value'));
-        updatePlot();
-    end
+        % If user just clicked “Direct”:
+        if event.NewValue == rad1   % Direct mode selected
+            % Enable Direct controls, disable Inverse controls
+            set(data.thetaSl,  'Enable','on');
+            set(data.thetaTxt, 'Enable','on');
+            set(data.alphaSl,  'Enable','off');
+            set(data.alphaTxt, 'Enable','off');
 
-    function modeChanged(~,~)
-        oldMode = modeState;
-        modeState = get(mode_menu,'Value');  % 1=Direct, 2=Inverse
-        try
-            % Preserve “angle” when switching modes
-            if oldMode == 1
-                % Direct→Inverse: get α from current theta
-                theta_curr = deg2rad(str2double(get(input_angle,'String')));
-                geo_val = readGeo();
-                [~, alpha_new, ~, ~] = fourbar_direct_kinematics(geo_val, theta_curr, configState);
-                new_deg = rad2deg(alpha_new);
-            else
-                % Inverse→Direct: get theta from current α
-                alpha_curr = deg2rad(str2double(get(input_angle,'String')));
-                geo_val = readGeo();
-                [theta_new, ~, ~, ~] = fourbar_inverse_kinematics(geo_val, alpha_curr, configState);
-                new_deg = rad2deg(theta_new);
+            % 1. Read the CURRENT Inverse sliders (alpha) so we can convert them
+            alpha = get(data.alphaSl, 'Value');
+            alpha_current = alpha;
+
+            % 2. Compute all inverse‐solutions at that P
+            invSol = fourbar_inverse_kinematics(g, deg2rad(alpha_current));
+
+            if ~isempty(invSol)
+                % 3. Pick the first valid solution (or whichever branch you want)
+                theta = invSol(1).theta;
+
+                % 4. Push those thetas into the Direct sliders/text
+                set(data.thetaSl,  'Value', rad2deg(theta));
+                set(data.thetaTxt, 'String', sprintf('%.1f', rad2deg(theta)));
             end
-            set(input_angle,'String',num2str(new_deg));
-            set(angle_slider,'Value',new_deg);
-        catch
-            % If conversion fails, do nothing
+
+            % 6. Redraw exactly that same pose
+            updatePlot([], []);
+
+        else  % “Inverse” was selected
+            % Enable Inverse controls, disable Direct controls
+            set(data.thetaSl,  'Enable','off');
+            set(data.thetaTxt, 'Enable','off');
+            set(data.alphaSl,  'Enable','on');
+            set(data.alphaTxt, 'Enable','on');
+
+            % 1. Read CURRENT Direct sliders (theta)
+            theta = get(data.thetaSl, 'Value');
+            currentTheta = theta;
+
+            % 2. Compute direct‐kinematics to get (Px,Py)
+            solDir = fourbar_direct_kinematics(g, deg2rad(currentTheta));
+
+            if ~isempty(solDir)
+                % 3. Take the same branch you were looking at (e.g. solDir(1))
+                alpha = solDir(1).alpha;   % assume
+
+                % 4. Push alpha into the Inverse sliders/text
+                set(data.alphaSl,  'Value', rad2deg(alpha));
+                set(data.alphaTxt,  'String', sprintf('%.2f', rad2deg(alpha)));
+            end
+
+            % 6. Redraw exactly that same pose
+            updatePlot([], []);
         end
-        updatePlot();
+        % Store back (if you made any changes to data)
+        guidata(hFig, data);
     end
-
-    function syncSlider(~,~)
-        val = str2double(get(input_angle,'String'));
-        if isnan(val), return; end
-        val = max(min(val,180), -180);
-        set(input_angle,'String',num2str(val));
-        set(angle_slider,'Value',val);
-        updatePlot();
-    end
-
-    function syncAngleEdit(~,~)
-        val = get(angle_slider,'Value');
-        set(input_angle,'String',num2str(val));
-        updatePlot();
-    end
-
-    function toggleAnimation(~,~)
-        animating = ~animating;
-        if animating
-            set(animate_btn,'String','Stop');
-            runAnimation();
-        else
-            set(animate_btn,'String','Animate');
-        end
-    end
-
-    function runAnimation()
-        % Get the current angle from the edit‐box (in degrees)
-        start_deg = str2double(get(input_angle,'String'));
-        if isnan(start_deg)
-            animating = false;
-            return;
-        end
-
-        % Compute feasible range in degrees for the current mode/config
-        geo_val = readGeo();
-        rng_deg = computeFeasibleAngleRange(geo_val, configState, modeState);
-        if isempty(rng_deg)
-            animating = false;
-            return;
-        end
-
-        % Unpack the range
-        min_deg = rng_deg(1);
-        max_deg = rng_deg(2);
-
-        % Clamp start_deg into [min_deg, max_deg]
-        if start_deg < min_deg
-            start_deg = min_deg;
-        elseif start_deg > max_deg
-            start_deg = max_deg;
-        end
-
-        % Number of steps for each segment
-        N = 200;
-        % First segment: from current angle → max_deg
-        if max_deg > start_deg
-            angles1 = linspace(start_deg, max_deg, ceil(N * (max_deg - start_deg)/(max_deg - min_deg)));
-        else
-            angles1 = start_deg;
-        end
-        % Second segment: from min_deg → current angle
-        if start_deg > min_deg
-            angles2 = linspace(min_deg, start_deg, N - numel(angles1));
-        else
-            angles2 = [];
-        end
-
-        angles = [angles1, angles2];
-
-        % Loop through that custom ordering
-        for ang = angles
-            if ~animating || ~ishandle(f), break; end
-            set(input_angle,'String',num2str(ang));
-            set(angle_slider,'Value',ang);
-            updatePlot();
-            drawnow;
-            pause(0.02);
-        end
-
-        % Once finished (or interrupted), reset button text
-        if ishandle(animate_btn)
-            set(animate_btn,'String','Animate');
-        end
-        animating = false;
-    end
-
 
     function updatePlot(~,~)
-        cla(ax); hold(ax,'on');
+        % Pull GUI data
+        data = guidata(hFig);
+
         try
-            geo_val   = readGeo();
+            % 1) Read geometry from the 8 edit boxes (same order as before)
+            g = zeros(1,7);
+            for ii = 1:7
+                g(ii) = str2double(get(data.geoEd(ii),'String'));
+            end
+            % Conversion to radians from the input values in degrees
+            g(6)=deg2rad(g(6));
+            g(7)=deg2rad(g(7));
+
+            % Compute axis limits
+            a=g(1); b=g(2); c=g(3); d=g(4);
+            R = max([a+b, c+d, a+c, b+d]);
+            margin = 0.01 * R;
+            data.limits=[-R - margin, R + margin,-R - margin, R + margin];
+
+            % 2) Find which solutions the user wants to see (1..4)
+            selSol = [];
+            if isfield(data,'sols_checkbox')
+                for k = 1:numel(data.sols_checkbox)
+                    if get(data.sols_checkbox(k),'Value')
+                        selSol(end+1) = k;
+                    end
+                end
+            end
+
+            % 3) Common plotting options for fourbar_plot
+            opts.ax         = data.ax;
+            opts.clearAxes  = true;
+            opts.limits     = data.limits;
+            opts.showLabels = true;
+            if ~isempty(selSol)
+                opts.solutions = selSol;
+            end
+
+            % 4) Which mode?
+            modeStr = get(data.modeBtn.SelectedObject,'String');
+
+            if strcmp(modeStr,'Direct')
+                %----------------------------------------------------------
+                % DIRECT MODE
+                %----------------------------------------------------------
+                theta = get(data.thetaSl,'Value');
+
+                % keep the text boxes in sync
+                set(data.thetaTxt,'String',sprintf('%.1f',theta));
+
+                % call the new unified plotter
+                if exist('fourbar_plot','file') ~= 2
+                    error('fourbar_plot.m is not on the path.');
+                end
+                [~, sol] = fourbar_plot(g, 'direct', deg2rad(theta), opts);
+
+                % enable/disable the 2 checkboxes exactly as before
+                for i = 1:2
+                    if i <= numel(sol) && (~isfield(sol(i),'valid') || sol(i).valid)
+                        set(data.sols_checkbox(i),'Enable','on');
+                    else
+                        set(data.sols_checkbox(i),'Enable','off');
+                    end
+                end
+
+                % build the info text
+                info_str = sprintf('Direct mode:\nθ = %.2f°\n',theta);
+                for i = 1:numel(sol)
+                    if ~isfield(sol(i),'valid') || sol(i).valid
+                        Pp = sol(i).P;
+                        al=rad2deg(sol(i).alpha);
+                        ph=rad2deg(sol(i).phi);
+                        info_str = sprintf('%sSol %d: P = [%.2f; %.2f]\t α=%.2f\t Φ=%.2f\n', ...
+                            info_str, i, Pp(1), Pp(2),al,ph);
+                    else
+                        info_str = sprintf('%sSol %d: invalid\n', info_str, i);
+                    end
+                end
+                set(data.info_text,'String',info_str);
+
+            else
+                %----------------------------------------------------------
+                % INVERSE MODE
+                %----------------------------------------------------------
+                alpha = get(data.alphaSl,'Value');
+
+                % keep the edit boxes in sync
+                set(data.alphaTxt,'String',sprintf('%.2f',alpha));
+
+                % call the new unified plotter
+                if exist('fourbar_plot','file') ~= 2
+                    error('fourbar_plot.m is not on the path.');
+                end
+                [~, sol] = fourbar_plot(g, 'inverse', deg2rad(alpha), opts);
+
+                % enable/disable checkboxes according to valid solutions
+                for i = 1:2
+                    if i <= numel(sol) && (~isfield(sol(i),'valid') || sol(i).valid)
+                        set(data.sols_checkbox(i),'Enable','on');
+                    else
+                        set(data.sols_checkbox(i),'Enable','off');
+                    end
+                end
+
+                % build info text
+                info_str = sprintf('Inverse mode:\nα = %.2f\n',alpha);
+                for i = 1:numel(sol)
+                    if ~isfield(sol(i),'valid') || sol(i).valid
+                        Pp = sol(i).P;
+                        th=rad2deg(sol(i).theta);
+                        ph=rad2deg(sol(i).phi);
+                        info_str = sprintf('%sSol %d: P = [%.2f; %.2f]\t θ=%.2f\t Φ=%.2f\n', ...
+                            info_str, i, Pp(1), Pp(2),th,ph);
+                    else
+                        info_str = sprintf('%sSol %d: invalid\n', info_str, i);
+                    end
+                end
+                set(data.info_text,'String',info_str);
+            end
 
             %— Plot trajectory of P if requested —
             if get(traj_checkbox,'Value')
                 thetas = linspace(0, 2*pi, 360);
                 P_traj = nan(2, numel(thetas));
-                if showAlternate
-                    P_traj_alt = nan(2, numel(thetas));
-                end
+                P_traj_alt = nan(2, numel(thetas));
                 for ii = 1:numel(thetas)
                     try
-                        [~, ~, ~, P_temp] = fourbar_direct_kinematics(geo_val, thetas(ii), configState);
-                        P_traj(:,ii) = P_temp(:);
-                    catch
-                        % skip invalid positions
-                    end
-                    if showAlternate
-                        try
-                            [~, ~, ~, P_temp_alt] = fourbar_direct_kinematics(geo_val, thetas(ii), -configState);
-                            P_traj_alt(:,ii) = P_temp_alt(:);
-                        catch
-                            % skip invalid positions
-                        end
+                        solDir = fourbar_direct_kinematics(g, thetas(ii));
+                        P_traj(:,ii) = solDir(1).P;
+                        P_traj_alt(:,ii) = solDir(2).P;
                     end
                 end
-                % Current‐config trajectory
-                plot(ax, P_traj(1,:), P_traj(2,:), 'k:', 'LineWidth',1);
-                % Alternate‐config trajectory (if showing alternate)
-                if showAlternate
+                % Check which branch to display
+                if any(selSol==1)
+                    plot(ax, P_traj(1,:), P_traj(2,:), 'k:', 'LineWidth',1);
+                end
+                if any(selSol==2)
                     plot(ax, P_traj_alt(1,:), P_traj_alt(2,:), 'k--', 'LineWidth',1);
                 end
             end
 
-            angle_deg = str2double(get(input_angle,'String'));
-            angle_rad = deg2rad(angle_deg);
-
-            if modeState == 1
-                % Direct kinematics
-                [phi, alpha, A, P] = fourbar_direct_kinematics(geo_val, angle_rad, configState);
-                theta = angle_rad;
-                B = [geo_val(4), 0] + geo_val(3)*[cos(theta), sin(theta)];
-                if showAlternate
-                    [~, ~, A_alt, P_alt] = fourbar_direct_kinematics(geo_val, theta, -configState);
-                    B_alt = [geo_val(4), 0] + geo_val(3)*[cos(theta), sin(theta)];
-                end
-            else
-                % Inverse kinematics
-                alpha = angle_rad;
-                [theta, phi, A, P] = fourbar_inverse_kinematics(geo_val, alpha, configState);
-                B = [geo_val(4), 0] + geo_val(3)*[cos(theta), sin(theta)];
-                if showAlternate
-                    [theta_alt, ~, A_alt, P_alt] = fourbar_inverse_kinematics(geo_val, alpha, -configState);
-                    B_alt = [geo_val(4), 0] + geo_val(3)*[cos(theta_alt), sin(theta_alt)];
-                end
-            end
-
-            %— Draw the filled triangular “coupler body” (A–B–P) in translucent green —
-            patch( ...
-                'XData',[A(1), B(1), P(1)], ...
-                'YData',[A(2), B(2), P(2)], ...
-                'FaceColor','g', ...
-                'EdgeColor','none', ...
-                'FaceAlpha',0.5, ...
-                'Parent',ax ...
-                );
-
-            %— Draw ground link O–C —
-            O = [0, 0];
-            C = [geo_val(4), 0];
-            plot(ax, [O(1), C(1)], [O(2), C(2)], 'k-', 'LineWidth',2);
-
-            %— Draw current-config links (on top of the patch) —
-            plot(ax, [O(1), A(1)], [O(2), A(2)], 'r-', 'LineWidth',2);   % Outlink O→A
-            plot(ax, [A(1), B(1)], [A(2), B(2)], 'g-', 'LineWidth',2);   % Coupler B→A
-            plot(ax, [B(1), C(1)], [B(2), C(2)], 'b-', 'LineWidth',2);   % Crank C→B
-
-            %— Plot joints as filled circles —
-            scatter(ax, [O(1), A(1), B(1), C(1)], [O(2), A(2), B(2), C(2)], 40, 'k','filled');
-
-            %— Plot point P (black “×”) —
-            plot(ax, P(1), P(2), 'kx', 'MarkerSize',8, 'LineWidth',2);
-
-            %— Plot alternate-config triangle and links if requested —
-            if showAlternate
-                patch( ...
-                    'XData',[A_alt(1), B_alt(1), P_alt(1)], ...
-                    'YData',[A_alt(2), B_alt(2), P_alt(2)], ...
-                    'FaceColor','g', ...
-                    'EdgeColor','none', ...
-                    'FaceAlpha',0.3, ...
-                    'Parent',ax ...
-                    );
-                plot(ax, [O(1), A_alt(1)], [O(2), A_alt(2)], 'r--', 'LineWidth',1.5);
-                plot(ax, [A_alt(1), B_alt(1)], [A_alt(2), B_alt(2)], 'g--', 'LineWidth',1.5);
-                plot(ax, [B_alt(1), C(1)], [B_alt(2), C(2)], 'b--', 'LineWidth',1.5);
-                scatter(ax, [A_alt(1), B_alt(1)], [A_alt(2), B_alt(2)], 30, 'k','filled');
-                plot(ax, P_alt(1), P_alt(2), 'g+', 'MarkerSize',8, 'LineWidth',1.5);
-            end
-
-            %— Draw tiny ground symbols at O and C —
-            drawGroundSymbol(ax, O, C);
-
-            %— Auto-scale axes —
-            Lmax = max(geo_val(1:4)) * 1.3;
-            axis(ax, [-Lmax Lmax -Lmax Lmax]);
-
-            %— Display textual readout —
-            if modeState == 1
-                txt = sprintf('φ = %.1f°   α = %.1f°   P = (%.2f, %.2f)', ...
-                    rad2deg(phi), rad2deg(alpha), P(1), P(2));
-            else
-                txt = sprintf('θ = %.1f°   φ = %.1f°   P = (%.2f, %.2f)', ...
-                    rad2deg(theta), rad2deg(phi), P(1), P(2));
-            end
-            set(angle_text,'String',txt);
+            % 5) enforce GUI limits and look
+            axis(data.ax,'equal');
+            xlim(data.ax, data.limits(1:2));
+            ylim(data.ax, data.limits(3:4));
+            drawnow;
 
         catch ME
             % Invalid/unreachable → show error
             cla(ax);
             text(0,0,'Unreachable','Parent',ax,'Color','r','FontSize',14,'HorizontalAlignment','center');
-            set(angle_text,'String',ME.message);
+            set(info_text,'String','Unreachable configuration');
         end
     end
 
 
-    function geo_out = readGeo()
-        % READGEO  Read [a b c d e epsilon] from GUI fields
-        a_val       = str2double(get(input_a,'String'));
-        b_val       = str2double(get(input_b,'String'));
-        c_val       = str2double(get(input_c,'String'));
-        d_val       = str2double(get(input_d,'String'));
-        e_val       = str2double(get(input_e,'String'));
-        eps_deg_val = str2double(get(input_epsilon,'String'));
-        epsilon_val = deg2rad(eps_deg_val);  % convert to radians
-        geo_out = [a_val, b_val, c_val, d_val, e_val, epsilon_val];
-    end
-
-    function drawGroundSymbol(axh, O_pt, C_pt)
-        % Draw small “L” shapes at O and C
-        Ls = max(get(axh,'XLim')) * 0.02;
-        plot(axh, [O_pt(1)-Ls, O_pt(1)+Ls], [O_pt(2), O_pt(2)], 'k-', 'LineWidth',2);
-        plot(axh, [O_pt(1), O_pt(1)], [O_pt(2)-Ls, O_pt(2)+Ls], 'k-', 'LineWidth',2);
-        plot(axh, [C_pt(1)-Ls, C_pt(1)+Ls], [C_pt(2), C_pt(2)], 'k-', 'LineWidth',2);
-        plot(axh, [C_pt(1), C_pt(1)], [C_pt(2)-Ls, C_pt(2)+Ls], 'k-', 'LineWidth',2);
-    end
-
-    function rng_deg = computeFeasibleAngleRange(geo_val, cfg, md)
-        % COMPUTEFEASIBLEANGLERANGE  Returns [min,max] in degrees for theta or α
-        try
-            a_len = geo_val(1);
-            b_len = geo_val(2);
-            c_len = geo_val(3);
-            d_len = geo_val(4);
-
-            if md == 1
-                % Direct: vary theta ∈ [–π,π]
-                thetas = linspace(-pi, pi, 361);
-                valid_th = false(size(thetas));
-                for i = 1:numel(thetas)
-                    try
-                        fourbar_direct_kinematics(geo_val, thetas(i), cfg);
-                        valid_th(i) = true;
-                    catch
-                        valid_th(i) = false;
-                    end
-                end
-                if ~any(valid_th), rng_deg = []; return; end
-                ths = thetas(valid_th);
-                rng_deg = [rad2deg(min(ths)), rad2deg(max(ths))];
-            else
-                % Inverse: vary α ∈ [–π,π]
-                alphas = linspace(-pi, pi, 361);
-                valid_al = false(size(alphas));
-                for i = 1:numel(alphas)
-                    try
-                        fourbar_inverse_kinematics(geo_val, alphas(i), cfg);
-                        valid_al(i) = true;
-                    catch
-                        valid_al(i) = false;
-                    end
-                end
-                if ~any(valid_al), rng_deg = []; return; end
-                als = alphas(valid_al);
-                rng_deg = [rad2deg(min(als)), rad2deg(max(als))];
+%-------------------------------------------------------------------------
+    function toggleAnimation(~,~)
+        % Start/stop the animation timer
+        data = guidata(hFig);
+        if data.animateFlag
+            % Stop and delete existing timer
+            if ~isempty(data.timerObj) && isvalid(data.timerObj)
+                stop(data.timerObj);
+                delete(data.timerObj);
             end
-        catch
-            rng_deg = [];
+            data.timerObj = [];
+            data.animateFlag = false;
+            set(data.animateBtn,'String','Animate');
+            guidata(hFig,data);
+        else
+            % Record current theta values as offsets
+            data.th_offset = get(data.thetaSl,'Value');
+            data.al_offset = get(data.alphaSl,'Value');
+            data.time_offset=now*24*3600;
+            % Ensure no old timer remains
+            if ~isempty(data.timerObj) && isvalid(data.timerObj)
+                stop(data.timerObj); delete(data.timerObj);
+            end
+            % Create timer for animation steps (e.g., 30 fps)
+            t = timer('ExecutionMode','fixedRate', ...
+                'Period',0.033, ...   % ~30 Hz
+                'TimerFcn',@animateStep);
+            data.timerObj = t;
+            data.animateFlag = true;
+            set(data.animateBtn,'String','Stop');
+            guidata(hFig,data);
+            start(t);
         end
     end
+
+%-------------------------------------------------------------------------
+    function animateStep(~,~)
+        % Called at each timer tick: update sliders for motion, then redraw
+        data = guidata(hFig);
+        mode = data.modeBtn.SelectedObject.String;
+        tnow = now*24*3600;  % seconds since some reference
+        switch mode
+            case 'Direct'
+                % Sinusoidal motion parameters
+                %Am = 180; f1 = 0.02; % amplitude/degrees, freq/Hz
+                %th = data.th_offset + Am * sin(2*pi*f1*tnow);
+                speed=10;
+                th = wrapTo180(data.th_offset + speed*(tnow-data.time_offset));
+                % Update sliders (silently)
+                set(data.thetaSl,'Value',th);
+            case 'Inverse'
+                speed=10;
+                al = wrapTo180(data.al_offset + speed*(tnow-data.time_offset));
+                % Update sliders (silently)
+                set(data.alphaSl,'Value',al);
+        end
+        updatePlot();
+    end
+
 
 end
