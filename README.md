@@ -72,11 +72,11 @@ Requires `numpy` and `matplotlib`. Run with `python rrr_gui.py` from within the 
 
 ## GUI Screenshots
 
-<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/RRRGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/RRRGUI.png" alt="Planar RRR GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fourbar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fourbar_gui.png" alt="Fourbar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/SliderCrankGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/SliderCrankGUI.png" alt="Slider-Crank GUI" width="350"></a>
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/RRRGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/RRRGUI.png" alt="Planar RRR GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fourbar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fourbar_gui.png" alt="Fourbar GUI" width="400"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/SliderCrankGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/SliderCrankGUI.png" alt="Slider-Crank GUI" width="350"></a>
 
 *Left to right: planar RRR linkage, planar fourbar linkage, and slider-crank mechanism GUIs. The fourbar GUI now displays both assembly-mode solutions side by side, with a File/Edit/View/Options/Help menu bar, session save/load, and timer-based animation.*
 
-<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fivebar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fivebar_gui.png" alt="Five-Bar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/StephensonIII_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/StephensonIII_gui.png" alt="Stephenson III GUI" width="350"></a>
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fivebar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fivebar_gui.png" alt="Five-Bar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/StephensonIII_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/StephensonIII_gui.png" alt="Stephenson III GUI" width="400"></a>
 
 *Left to right: planar five-bar linkage and Stephenson III six-bar linkage GUIs. Both display every valid assembly solution branch side by side and let you pick which ones to show and animate.*
 
