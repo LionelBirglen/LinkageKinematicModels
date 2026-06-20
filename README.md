@@ -48,7 +48,7 @@ The `Python/` folder currently provides a NumPy/Matplotlib port of the **planar 
 - `rrr_inverse_kinematics.py` — same signature and behavior as its MATLAB counterpart
 - `rrr_gui.py` — interactive Matplotlib GUI with sliders/text boxes for link lengths, direct/inverse mode toggle, and elbow-up/elbow-down configuration switching
 
-Requires `numpy` and `matplotlib`. Run with `python rrr_gui.py` from within the `Python/` folder.
+Requires `numpy` and `matplotlib`. Run with `python rrr_gui.py` from within the `Python/` folder. Python functions are lagging behind Matlab's since the former are a port of the latter. Main programming language for this repository is Matlab.
 
 ## GUI Screenshots
 
