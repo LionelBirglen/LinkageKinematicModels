@@ -7,6 +7,8 @@ Support files for the kinematic analysis of a few sample linkages and support fi
 - the slider-crank linkage
 - spherical RRR serial chain
 - spherical fourbar linkage
+- planar five-bar linkage
+- Stephenson III six-bar linkage
 
 Each linkage ships with a **direct (forward) kinematics** function, an **inverse kinematics** function, and an interactive **GUI** that lets you move and animate the mechanism. All MATLAB functions are documented with input/output descriptions and a runnable usage example in their header comments. The forward and inverse functions can be used as standalone and called by external functions (e.g. an optimization) without the gui.
 
@@ -14,7 +16,7 @@ Each linkage ships with a **direct (forward) kinematics** function, an **inverse
 
 ```
 LinkageKinematicModels/
-├── Matlab/    # Direct/inverse kinematics + GUI for all 5 linkages
+├── Matlab/    # Direct/inverse kinematics + GUI for all 7 linkages
 ├── Python/    # Direct/inverse kinematics + GUI for the planar RRR chain
 ├── Media/     # GUI screenshots
 └── LICENSE    # GNU AGPL v3.0
@@ -31,6 +33,8 @@ Run `xxx_gui.m` from MATLAB to open a graphical interface for a given linkage, o
 | Slider-crank | `slidercrank_direct_kinematics(a, b, phi, slider_angle, config)` → `x_slider, B, P` | `slidercrank_inverse_kinematics(a, b, x_slider, config, slider_angle)` → `phi, B` | `slidercrank_gui()` |
 | Spherical RRR | `rrr_spherical_direct_kinematics(geometry, angles)` → `P, R_full, eul` | `rrr_spherical_inverse_kinematics(geometry, eul)` → `theta, ok` | `rrr_spherical_gui()` |
 | Spherical fourbar | `fourbar_spherical_direct_kinematics(arcAngles, theta)` → `alpha, ok, P1, P2` | `fourbar_spherical_inverse_kinematics(arcAngles, alpha)` → `theta, ok, P1, P2` | `fourbar_spherical_gui()` |
+| Planar five-bar | `fivebar_direct_kinematics(geo, theta)` → `sol` (struct array, one entry per assembly mode) | `fivebar_inverse_kinematics(geo, P_des)` → `invSol` (struct array, up to 4 solutions) | `fivebar_gui()` |
+| Stephenson III six-bar | `stephensonIII_direct_kinematics(geo, theta_O)` → `sols` (struct array, up to 4 solutions) | `stephensonIII_inverse_kinematics(geo, thetaB)` → `sols` (struct array, up to 4 solutions) | `stephensonIII_gui()` |
 
 Notes on each mechanism's geometry parameters:
 
@@ -39,6 +43,8 @@ Notes on each mechanism's geometry parameters:
 - **Slider-crank**: `a` and `b` are the crank and coupler lengths, `slider_angle` sets the orientation of the prismatic joint axis, and `config` selects elbow-down (+1) or elbow-up (-1).
 - **Spherical RRR**: `geometry = [alpha1, alpha2, alpha3]` are the spherical arc angles between successive joint axes (degrees); orientation is returned both as a rotation matrix and as Z-Y-X Euler angles. The inverse function returns both elbow-up and elbow-down branches, with an `ok` flag signaling singular configurations.
 - **Spherical fourbar**: `arcAngles = [eta1, eta2, eta3, eta4]` are the four link arc lengths (degrees) of the spherical four-bar; both direct and inverse functions return the two possible solution branches.
+- **Planar five-bar**: `geo = [a, b, c, d, e, alpha, h, eta]` packs the two input cranks `a` (O→A) and `d` (D→C), the two couplers `b` (A→B, treated as the output link) and `c` (C→B), the distance `e` between the two fixed ground pivots O and D oriented at angle `alpha`, and a point of interest P located at radial distance `h` from A and angle `eta` from the A→B direction. `theta = [theta1, theta2]` are the two input crank angles for the direct function; the inverse function instead takes a desired point location `P_des`. Both return a struct array (one entry per assembly mode) with joint positions, output-link orientation `phi`, point `P`, and a `valid` flag.
+- **Stephenson III six-bar**: `geo = [OA, Bx, By, OC, CD, DA, BE, EM, DM, MP, eta, delta]` sets the two ground pivots (O at the origin, A on the x-axis, B at `[Bx, By]`), the input crank `OC`, the remaining link lengths `CD, DA, BE, EM, DM, MP`, and two angular offsets `eta`/`delta`. The direct function takes the input crank angle `theta_O`; the inverse function takes the desired output-link angle `thetaB`. Both return a struct array of valid assembly solutions, each with full joint positions, link angles, and a `valid` flag.
 
 ## Python Functions
 
@@ -55,6 +61,10 @@ Requires `numpy` and `matplotlib`. Run with `python rrr_gui.py` from within the 
 <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/RRRGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/RRRGUI.png" alt="Planar RRR GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/FourbarGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/FourbarGUI.png" alt="Fourbar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/SliderCrankGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/SliderCrankGUI.png" alt="Slider-Crank GUI" width="350"></a>
 
 *Left to right: planar RRR linkage, planar fourbar linkage, and slider-crank mechanism GUIs. Each lets you switch between direct and inverse kinematics modes, toggle elbow/crossed configurations, view the alternate solution branch, and animate the motion.*
+
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fivebar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fivebar_gui.png" alt="Five-Bar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/StephensonIII_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/StephensonIII_gui.png" alt="Stephenson III GUI" width="350"></a>
+
+*Left to right: planar five-bar linkage and Stephenson III six-bar linkage GUIs. Both display every valid assembly solution branch side by side and let you pick which ones to show and animate.*
 
 ## License
 
