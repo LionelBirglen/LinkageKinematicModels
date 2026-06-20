@@ -60,6 +60,8 @@ Requires `numpy` and `matplotlib`. Run with `python rrr_gui.py` from within the 
 
 All files are released under the GNU Affero General Public License v3.0, see LICENSE file.
 
+---
+
 Prof. Lionel Birglen<br/>
 Polytechnique Montreal<br/>
 Contact: lionel.birglen@polymtl.ca
