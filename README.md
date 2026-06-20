@@ -46,6 +46,20 @@ Notes on each mechanism's geometry parameters:
 - **Planar five-bar**: `geo = [a, b, c, d, e, alpha, h, eta]` packs the two input cranks `a` (O→A) and `d` (D→C), the two couplers `b` (A→B, treated as the output link) and `c` (C→B), the distance `e` between the two fixed ground pivots O and D oriented at angle `alpha`, and a point of interest P located at radial distance `h` from A and angle `eta` from the A→B direction. `theta = [theta1, theta2]` are the two input crank angles for the direct function; the inverse function instead takes a desired point location `P_des`. Both return a struct array (one entry per assembly mode) with joint positions, output-link orientation `phi`, point `P`, and a `valid` flag.
 - **Stephenson III six-bar**: `geo = [OA, Bx, By, OC, CD, DA, BE, EM, DM, MP, eta, delta]` sets the two ground pivots (O at the origin, A on the x-axis, B at `[Bx, By]`), the input crank `OC`, the remaining link lengths `CD, DA, BE, EM, DM, MP`, and two angular offsets `eta`/`delta`. The direct function takes the input crank angle `theta_O`; the inverse function takes the desired output-link angle `thetaB`. Both return a struct array of valid assembly solutions, each with full joint positions, link angles, and a `valid` flag.
 
+### Extra GUI Features (fourbar & fivebar)
+
+`fourbar_gui()` and `fivebar_gui()` go beyond simple sliders and animation — they add a full menu bar (File / Edit / View / Options / Help) with:
+
+- **Open** — load a previously saved `.mat` session and restore the geometry/state fields into the GUI
+- **Save** — save the current geometry and GUI state to a `.mat` session file (defaults to `fourbar_session.mat` / `fivebar_session.mat`)
+- **Export PNG** — export the current figure as a PNG image
+- **Export EPS+PDF** — export the current figure as vector EPS, then convert it to PDF
+- **Print** — send the figure to the system print dialog
+- **View → Reset View** — reset axis zoom/pan back to the default view
+- **Options → Preferences** — toggle the plot grid on/off
+
+These menu-driven save/load/export/print options are currently unique to the fourbar and five-bar GUIs; the other linkage GUIs (`rrr_gui`, `slidercrank_gui`, `rrr_spherical_gui`, `fourbar_spherical_gui`, `stephensonIII_gui`) do not yet include them.
+
 ## Python Functions
 
 The `Python/` folder currently provides a NumPy/Matplotlib port of the **planar RRR** chain only for now:
@@ -58,11 +72,11 @@ Requires `numpy` and `matplotlib`. Run with `python rrr_gui.py` from within the 
 
 ## GUI Screenshots
 
-<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/RRRGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/RRRGUI.png" alt="Planar RRR GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fourbar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fourbar_gui.png" alt="Fourbar GUI" width="400"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/SliderCrankGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/SliderCrankGUI.png" alt="Slider-Crank GUI" width="350"></a>
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/RRRGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/RRRGUI.png" alt="Planar RRR GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fourbar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fourbar_gui.png" alt="Fourbar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/SliderCrankGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/SliderCrankGUI.png" alt="Slider-Crank GUI" width="350"></a>
 
 *Left to right: planar RRR linkage, planar fourbar linkage, and slider-crank mechanism GUIs. The fourbar GUI now displays both assembly-mode solutions side by side, with a File/Edit/View/Options/Help menu bar, session save/load, and timer-based animation.*
 
-<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fivebar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fivebar_gui.png" alt="Five-Bar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/StephensonIII_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/StephensonIII_gui.png" alt="Stephenson III GUI" width="400"></a>
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fivebar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fivebar_gui.png" alt="Five-Bar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/StephensonIII_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/StephensonIII_gui.png" alt="Stephenson III GUI" width="350"></a>
 
 *Left to right: planar five-bar linkage and Stephenson III six-bar linkage GUIs. Both display every valid assembly solution branch side by side and let you pick which ones to show and animate.*
 
