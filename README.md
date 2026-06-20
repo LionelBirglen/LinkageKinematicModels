@@ -1,6 +1,6 @@
-# Common Linkages' Kinematic Models / MEC6319 Course and More
+# Common Linkages' Kinematic Models
 
-Support files for the kinematic analysis of a few sample linkages studied during the MEC6319 course at Polytechnique Montreal:
+Support files for the kinematic analysis of a few sample linkages and support files for the MEC6319 course at Polytechnique Montreal:
 
 - the planar RRR serial chain
 - the planar fourbar linkage
@@ -8,7 +8,7 @@ Support files for the kinematic analysis of a few sample linkages studied during
 - spherical RRR serial chain
 - spherical fourbar linkage
 
-Each linkage ships with a **direct (forward) kinematics** function, an **inverse kinematics** function, and an interactive **GUI** that lets you move and animate the mechanism. All MATLAB functions are documented with input/output descriptions and a runnable usage example in their header comments. MATLAB code is also Octave-compatible.
+Each linkage ships with a **direct (forward) kinematics** function, an **inverse kinematics** function, and an interactive **GUI** that lets you move and animate the mechanism. All MATLAB functions are documented with input/output descriptions and a runnable usage example in their header comments. The forward and inverse functions can be used standalone and call by external functions (e.g. an optimization) without the gui.
 
 ## Repository Structure
 
