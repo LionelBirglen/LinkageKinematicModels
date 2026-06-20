@@ -8,7 +8,7 @@ Support files for the kinematic analysis of a few sample linkages and support fi
 - spherical RRR serial chain
 - spherical fourbar linkage
 
-Each linkage ships with a **direct (forward) kinematics** function, an **inverse kinematics** function, and an interactive **GUI** that lets you move and animate the mechanism. All MATLAB functions are documented with input/output descriptions and a runnable usage example in their header comments. The forward and inverse functions can be used standalone and call by external functions (e.g. an optimization) without the gui.
+Each linkage ships with a **direct (forward) kinematics** function, an **inverse kinematics** function, and an interactive **GUI** that lets you move and animate the mechanism. All MATLAB functions are documented with input/output descriptions and a runnable usage example in their header comments. The forward and inverse functions can be used as standalone and called by external functions (e.g. an optimization) without the gui.
 
 ## Repository Structure
 
