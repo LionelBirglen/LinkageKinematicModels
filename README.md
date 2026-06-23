@@ -72,8 +72,6 @@ sol = rrr_direct_kinematics(geo, deg2rad(39), deg2rad(37), deg2rad(40));
 
 ### Slider-Crank Linkage
 
-Topology: **O** (fixed revolute) → crank → **A** (revolute) → coupler → **B** (revolute, rides in fixed slider block) → extension link → **P** (end-effector cross).
-
 | File | Description |
 |---|---|
 | `slidercrank_direct_kinematics.m` | Direct kinematics — given crank angle φ, returns positions O, A, B, P and slider displacement x |
@@ -190,8 +188,6 @@ All kinematics functions return dicts (Python) or structs (MATLAB) with a common
 
 ## GUI Features Summary
 
-All six GUIs (3 × MATLAB, 3 × Python) share the same layout and feature set:
-
 - **900 × 600** window
 - **Geometry panel** — edit link lengths and angles directly; plot updates on each change
 - **Mode selection** — Direct / Inverse radio buttons; switching converts the current pose automatically
@@ -202,15 +198,6 @@ All six GUIs (3 × MATLAB, 3 × Python) share the same layout and feature set:
 - **Info text** — displays current kinematics results (joint angles, end-effector position)
 - **Session save/load** — `.mat` files (MATLAB/Octave), `.json` files (Python)
 - **Export PNG** — saves the current plot at high resolution
-
-### GUI-specific features
-
-| Feature | Four-Bar | RRR | Slider-Crank |
-|---|---|---|---|
-| Show P trajectory | ✓ | — | — |
-| Show both configs | — | ✓ | — |
-| Config toggle button | — | ✓ | — |
-| Display solutions ×2 | ✓ | — | ✓ |
 
 ---
 
