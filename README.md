@@ -1,91 +1,229 @@
-# Common Linkages' Kinematic Models
+# Common Linkages' Kinematic Models — MEC6319 Course and More
 
-Support files for the kinematic analysis of a few sample linkages and support files for the MEC6319 course at Polytechnique Montreal:
+Support files for the kinematic analysis of planar linkages studied in the MEC6319 course at Polytechnique Montréal. Each mechanism is provided with direct kinematics, inverse kinematics, a standalone plot function, and a fully interactive GUI — all in both **MATLAB/Octave** and **Python**.
 
-- the planar RRR serial chain
-- the planar fourbar linkage
-- the slider-crank linkage
-- spherical RRR serial chain
-- spherical fourbar linkage
-- planar five-bar linkage
-- Stephenson III six-bar linkage
+## Mechanisms Included
 
-Each linkage ships with a **direct (forward) kinematics** function, an **inverse kinematics** function, and an interactive **GUI** that lets you move and animate the mechanism. All MATLAB functions are documented with input/output descriptions and a runnable usage example in their header comments. The forward and inverse functions can be used as standalone and called by external functions (e.g. an optimization) without the gui.
+| Mechanism | Direct Kinematics | Inverse Kinematics | Plot | GUI |
+|---|---|---|---|---|
+| Planar Four-Bar Linkage | ✓ | ✓ | ✓ | ✓ |
+| Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ |
+| Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ |
+| Spherical RRR Serial Chain | ✓ | ✓ | — | ✓ |
+| Spherical Four-Bar Linkage | ✓ | ✓ | — | ✓ |
+
+---
 
 ## Repository Structure
 
 ```
 LinkageKinematicModels/
-├── Matlab/    # Direct/inverse kinematics + GUI for all 7 linkages
-├── Python/    # Direct/inverse kinematics + GUI for the planar RRR chain
-├── Media/     # GUI screenshots
-└── LICENSE    # GNU AGPL v3.0
+├── Matlab/          # MATLAB/Octave source files
+├── Python/          # Python source files
+├── Media/           # Screenshots and images
+├── LICENSE
+└── README.md
 ```
-
-## MATLAB Functions
-
-Run `xxx_gui.m` from MATLAB to open a graphical interface for a given linkage, or call the direct/inverse functions standalone. Every function file documents the exact input/output format and a worked example — see the function header for details.
-
-| Linkage | Direct kinematics | Inverse kinematics | GUI |
-|---|---|---|---|
-| Planar RRR (3R serial chain) | `rrr_direct_kinematics(L1, L2, L3, theta1, theta2, theta3)` → `P1, P2, P3` | `rrr_inverse_kinematics(L1, L2, L3, Px, Py, phi, elbow_config)` → `theta1, theta2, theta3, success` | `rrr_gui()` |
-| Planar fourbar | `fourbar_direct_kinematics(geo, theta)` → `sol` (2-entry struct array, both assembly modes) | `fourbar_inverse_kinematics(geo, alpha)` → `sol` (2-entry struct array, both assembly modes) | `fourbar_gui()` |
-| Slider-crank | `slidercrank_direct_kinematics(a, b, phi, slider_angle, config)` → `x_slider, B, P` | `slidercrank_inverse_kinematics(a, b, x_slider, config, slider_angle)` → `phi, B` | `slidercrank_gui()` |
-| Spherical RRR | `rrr_spherical_direct_kinematics(geometry, angles)` → `P, R_full, eul` | `rrr_spherical_inverse_kinematics(geometry, eul)` → `theta, ok` | `rrr_spherical_gui()` |
-| Spherical fourbar | `fourbar_spherical_direct_kinematics(arcAngles, theta)` → `alpha, ok, P1, P2` | `fourbar_spherical_inverse_kinematics(arcAngles, alpha)` → `theta, ok, P1, P2` | `fourbar_spherical_gui()` |
-| Planar five-bar | `fivebar_direct_kinematics(geo, theta)` → `sol` (struct array, one entry per assembly mode) | `fivebar_inverse_kinematics(geo, P_des)` → `invSol` (struct array, up to 4 solutions) | `fivebar_gui()` |
-| Stephenson III six-bar | `stephensonIII_direct_kinematics(geo, theta_O)` → `sols` (struct array, up to 4 solutions) | `stephensonIII_inverse_kinematics(geo, thetaB)` → `sols` (struct array, up to 4 solutions) | `stephensonIII_gui()` |
-
-Notes on each mechanism's geometry parameters:
-
-- **Planar RRR**: `L1, L2, L3` are the three link lengths; `theta1` is the absolute angle of link 1, `theta2`/`theta3` are the relative angles between successive links. The inverse function also takes a desired end-effector pose `(Px, Py, phi)` and an `elbow_config` flag (+1 elbow-up, -1 elbow-down).
-- **Planar fourbar**: geometry is now packed as `geo = [a, b, c, d, e, epsilon, delta]` — output link, coupler, input crank, ground link, distance to coupler point P, the angle of P relative to the coupler centerline, and a new `delta` angle locating the ground pivot C (`C = [d*cos(delta), d*sin(delta)]`, previously fixed along the x-axis). Both direct and inverse functions now always return a 2-entry struct array `sol` covering both assembly modes (open/crossed) in one call, rather than requiring a separate `config` argument to pick one. Each `sol(k)` holds the joint positions, link angles `phi`/`alpha`, point `P`, planar twists, and a `valid` flag.
-- **Slider-crank**: `a` and `b` are the crank and coupler lengths, `slider_angle` sets the orientation of the prismatic joint axis, and `config` selects elbow-down (+1) or elbow-up (-1).
-- **Spherical RRR**: `geometry = [alpha1, alpha2, alpha3]` are the spherical arc angles between successive joint axes (degrees); orientation is returned both as a rotation matrix and as Z-Y-X Euler angles. The inverse function returns both elbow-up and elbow-down branches, with an `ok` flag signaling singular configurations.
-- **Spherical fourbar**: `arcAngles = [eta1, eta2, eta3, eta4]` are the four link arc lengths (degrees) of the spherical four-bar; both direct and inverse functions return the two possible solution branches.
-- **Planar five-bar**: `geo = [a, b, c, d, e, alpha, h, eta]` packs the two input cranks `a` (O→A) and `d` (D→C), the two couplers `b` (A→B, treated as the output link) and `c` (C→B), the distance `e` between the two fixed ground pivots O and D oriented at angle `alpha`, and a point of interest P located at radial distance `h` from A and angle `eta` from the A→B direction. `theta = [theta1, theta2]` are the two input crank angles for the direct function; the inverse function instead takes a desired point location `P_des`. Both return a struct array (one entry per assembly mode) with joint positions, output-link orientation `phi`, point `P`, and a `valid` flag.
-- **Stephenson III six-bar**: `geo = [OA, Bx, By, OC, CD, DA, BE, EM, DM, MP, eta, delta]` sets the two ground pivots (O at the origin, A on the x-axis, B at `[Bx, By]`), the input crank `OC`, the remaining link lengths `CD, DA, BE, EM, DM, MP`, and two angular offsets `eta`/`delta`. The direct function takes the input crank angle `theta_O`; the inverse function takes the desired output-link angle `thetaB`. Both return a struct array of valid assembly solutions, each with full joint positions, link angles, and a `valid` flag.
-
-### Extra GUI Features (fourbar & fivebar)
-
-`fourbar_gui()` and `fivebar_gui()` go beyond simple sliders and animation — they add a full menu bar (File / Edit / View / Options / Help) with:
-
-- **Open** — load a previously saved `.mat` session and restore the geometry/state fields into the GUI
-- **Save** — save the current geometry and GUI state to a `.mat` session file (defaults to `fourbar_session.mat` / `fivebar_session.mat`)
-- **Export PNG** — export the current figure as a PNG image
-- **Export EPS+PDF** — export the current figure as vector EPS, then convert it to PDF
-- **Print** — send the figure to the system print dialog
-- **View → Reset View** — reset axis zoom/pan back to the default view
-- **Options → Preferences** — toggle the plot grid on/off
-
-These menu-driven save/load/export/print options are currently unique to the fourbar and five-bar GUIs; the other linkage GUIs (`rrr_gui`, `slidercrank_gui`, `rrr_spherical_gui`, `fourbar_spherical_gui`, `stephensonIII_gui`) do not yet include them.
-
-## Python Functions
-
-The `Python/` folder currently provides a NumPy/Matplotlib port of the **planar RRR** chain only for now:
-
-- `rrr_direct_kinematics.py` — same signature and behavior as its MATLAB counterpart
-- `rrr_inverse_kinematics.py` — same signature and behavior as its MATLAB counterpart
-- `rrr_gui.py` — interactive Matplotlib GUI with sliders/text boxes for link lengths, direct/inverse mode toggle, and elbow-up/elbow-down configuration switching
-
-Requires `numpy` and `matplotlib`. Run with `python rrr_gui.py` from within the `Python/` folder. Python functions are lagging behind Matlab's since the former are a port of the latter. Main programming language for this repository is Matlab.
-
-## GUI Screenshots
-
-<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/RRRGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/RRRGUI.png" alt="Planar RRR GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fourbar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fourbar_gui.png" alt="Fourbar GUI" width="400"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/SliderCrankGUI.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/SliderCrankGUI.png" alt="Slider-Crank GUI" width="350"></a>
-
-*Left to right: planar RRR linkage, planar fourbar linkage, and slider-crank mechanism GUIs. The fourbar GUI now displays both assembly-mode solutions side by side, with a File/Edit/View/Options/Help menu bar, session save/load, and timer-based animation.*
-
-<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/fivebar_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/fivebar_gui.png" alt="Five-Bar GUI" width="350"></a> <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/StephensonIII_gui.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/StephensonIII_gui.png" alt="Stephenson III GUI" width="400"></a>
-
-*Left to right: planar five-bar linkage and Stephenson III six-bar linkage GUIs. Both display every valid assembly solution branch side by side and let you pick which ones to show and animate.*
-
-## License
-
-All files are released under the GNU Affero General Public License v3.0, see LICENSE file.
 
 ---
 
-Prof. Lionel Birglen<br/>
-Polytechnique Montreal<br/>
-Contact: lionel.birglen@polymtl.ca
+## MATLAB / Octave
+
+All files are compatible with both **MATLAB** (R2019b or later recommended) and **GNU Octave** (6.x or later). No additional toolboxes are required.
+
+### Four-Bar Linkage
+
+| File | Description |
+|---|---|
+| `fourbar_direct_kinematics.m` | Direct kinematics — given crank angle θ, returns positions of all joints and coupler point P for both assembly modes |
+| `fourbar_inverse_kinematics.m` | Inverse kinematics — given output link angle α, returns crank angle θ and joint positions for both assembly modes |
+| `fourbar_plot.m` | Standalone plot function — draws the linkage with ground symbols, joint circles, coupler triangle, and P marker |
+| `fourbar_gui.m` | Interactive GUI — 900×600 window with geometry inputs, direct/inverse mode, display-solutions checkboxes, P trajectory, animation, session save/load, PNG export |
+
+**Geometry input** (`geo`): accepts a numeric vector `[a, b, c, d, e, ε, δ]` (backward-compatible) **or** a struct with fields `.a .b .c .d .e .epsilon .delta`. Angles ε and δ in radians.
+
+```matlab
+% Vector form
+geo = [0.81, 0.88, 0.92, 1.51, 0.80, pi/6, -10*pi/180];
+sol = fourbar_direct_kinematics(geo, deg2rad(106));
+
+% Struct form
+geo = struct('a',0.81,'b',0.88,'c',0.92,'d',1.51,'e',0.80,'epsilon',pi/6,'delta',-10*pi/180);
+sol = fourbar_direct_kinematics(geo, deg2rad(106));
+```
+
+### Planar RRR Serial Chain
+
+| File | Description |
+|---|---|
+| `rrr_direct_kinematics.m` | Direct kinematics — given joint angles θ1, θ2, θ3, returns positions O, A, B, P and end-effector orientation φ |
+| `rrr_inverse_kinematics.m` | Inverse kinematics — given target position (Px, Py) and orientation φ, returns joint angles for elbow-up/down |
+| `rrr_plot.m` | Standalone plot function — draws three colored links, joint circles, end-effector cross, ground symbol, and labels |
+| `rrr_gui.m` | Interactive GUI — direct mode (3 joint sliders), inverse mode (X, Y, φ sliders), config toggle, show-both, animation |
+
+**Geometry input** (`geo`): struct with fields `.L1 .L2 .L3` or numeric vector `[L1, L2, L3]`.
+
+```matlab
+geo = struct('L1', 57, 'L2', 46, 'L3', 51);
+sol = rrr_direct_kinematics(geo, deg2rad(39), deg2rad(37), deg2rad(40));
+```
+
+### Slider-Crank Linkage
+
+Topology: **O** (fixed revolute) → crank → **A** (revolute) → coupler → **B** (revolute, rides in fixed slider block) → extension link → **P** (end-effector cross).
+
+| File | Description |
+|---|---|
+| `slidercrank_direct_kinematics.m` | Direct kinematics — given crank angle φ, returns positions O, A, B, P and slider displacement x |
+| `slidercrank_inverse_kinematics.m` | Inverse kinematics — given slider displacement x (position of B), returns crank angle φ and joint positions |
+| `slidercrank_plot.m` | Standalone plot function — draws rail, fixed slider block, crank (red), coupler (green), extension link (blue), joint circles, P cross |
+| `slidercrank_gui.m` | Interactive GUI — direct mode (φ slider), inverse mode (x slider controlling position of P), display-solutions checkboxes, animation sweeping full stroke, session save/load |
+
+**Geometry input** (`geo`): struct with fields `.a .b .c .slider_angle` or numeric vector `[a, b, c, slider_angle]`. The slider_angle is in radians; c may be negative (places P on the opposite side of B).
+
+```matlab
+geo = struct('a', 50, 'b', 120, 'c', 30, 'slider_angle', 0);
+sol = slidercrank_direct_kinematics(geo, deg2rad(45), +1);
+```
+
+### Running the GUIs
+
+```matlab
+fourbar_gui        % Four-Bar Linkage
+rrr_gui            % Planar RRR Serial Chain
+slidercrank_gui    % Slider-Crank Linkage
+```
+
+All GUIs feature:
+- **File menu**: Open / Save session (`.mat`), Export PNG, Export EPS+PDF (MATLAB only), Print (MATLAB only), Exit
+- **View menu**: Reset View
+- **Options menu**: Toggle Grid
+- Compatible with both MATLAB and Octave (Octave disables EPS/PDF export and print)
+
+---
+
+## Python
+
+Requires **Python 3.8+** with `numpy` and `matplotlib`. No other dependencies.
+
+```bash
+pip install numpy matplotlib
+```
+
+### Four-Bar Linkage
+
+| File | Description |
+|---|---|
+| `fourbar_direct_kinematics.py` | Direct kinematics — returns list of 2 solution dicts |
+| `fourbar_inverse_kinematics.py` | Inverse kinematics — returns list of 2 solution dicts |
+| `fourbar_plot.py` | Plot function — `fourbar_plot(geo, mode, inputs, opts, ax)` |
+| `fourbar_gui.py` | Tkinter GUI — matches MATLAB layout |
+
+### Planar RRR Serial Chain
+
+| File | Description |
+|---|---|
+| `rrr_direct_kinematics.py` | Direct kinematics — returns solution dict |
+| `rrr_inverse_kinematics.py` | Inverse kinematics — returns solution dict |
+| `rrr_plot.py` | Plot function — `rrr_plot(geo, mode, inputs, opts, ax)` |
+| `rrr_gui.py` | Tkinter GUI — matches MATLAB layout |
+
+### Slider-Crank Linkage
+
+| File | Description |
+|---|---|
+| `slidercrank_direct_kinematics.py` | Direct kinematics — returns solution dict |
+| `slidercrank_inverse_kinematics.py` | Inverse kinematics — returns solution dict |
+| `slidercrank_plot.py` | Plot function — `slidercrank_plot(geo, mode, inputs, opts, ax)` |
+| `slidercrank_gui.py` | Tkinter GUI — matches MATLAB layout |
+
+### Running the Python GUIs
+
+```bash
+python fourbar_gui.py
+python rrr_gui.py
+python slidercrank_gui.py
+```
+
+### Python API Example
+
+```python
+import math
+import numpy as np
+from fourbar_direct_kinematics import fourbar_direct_kinematics
+from rrr_inverse_kinematics import rrr_inverse_kinematics
+from slidercrank_direct_kinematics import slidercrank_direct_kinematics
+
+# Four-bar
+geo = np.array([0.81, 0.88, 0.92, 1.51, 0.80, math.pi/6, -10*math.pi/180])
+sols = fourbar_direct_kinematics(geo, math.radians(106))
+print(sols[0]['P'])  # coupler point for solution 1
+
+# RRR
+geo = {'L1': 57, 'L2': 46, 'L3': 51}
+sol = rrr_inverse_kinematics(geo, 35, 125, math.radians(116), elbow_config=+1)
+print(math.degrees(sol['theta1']))
+
+# Slider-crank
+geo = {'a': 50, 'b': 120, 'c': 30, 'slider_angle': 0}
+sol = slidercrank_direct_kinematics(geo['a'], geo['b'], geo['c'],
+                                    math.radians(45), geo['slider_angle'], config=+1)
+print(sol['x_slider'])
+```
+
+### Solution Dictionaries
+
+All kinematics functions return dicts (Python) or structs (MATLAB) with a common `Positions` field:
+
+| Field | Description |
+|---|---|
+| `Positions['O']` | Fixed ground revolute, always `[0, 0]` |
+| `Positions['A']` | First moving joint |
+| `Positions['B']` | Second moving joint (or slider pin) |
+| `Positions['C']` | Second fixed pivot (four-bar only) |
+| `Positions['P']` | End-effector / coupler point |
+| `valid` | `True` if the configuration is geometrically feasible |
+
+---
+
+## GUI Features Summary
+
+All six GUIs (3 × MATLAB, 3 × Python) share the same layout and feature set:
+
+- **900 × 600** window
+- **Geometry panel** — edit link lengths and angles directly; plot updates on each change
+- **Mode selection** — Direct / Inverse radio buttons; switching converts the current pose automatically
+- **Direct mode sliders** — control input angles; disabled in inverse mode
+- **Inverse mode sliders** — control target position/orientation; disabled in direct mode
+- **Display solutions panel** — checkboxes to show/hide each assembly configuration independently
+- **Animate button** — starts/stops real-time animation; direct mode rotates joints, inverse mode sweeps through the workspace
+- **Info text** — displays current kinematics results (joint angles, end-effector position)
+- **Session save/load** — `.mat` files (MATLAB/Octave), `.json` files (Python)
+- **Export PNG** — saves the current plot at high resolution
+
+### GUI-specific features
+
+| Feature | Four-Bar | RRR | Slider-Crank |
+|---|---|---|---|
+| Show P trajectory | ✓ | — | — |
+| Show both configs | — | ✓ | — |
+| Config toggle button | — | ✓ | — |
+| Display solutions ×2 | ✓ | — | ✓ |
+
+---
+
+## Screenshots
+
+![RRR GUI](Media/RRRGUI.png)
+
+---
+
+## License
+
+All files are released under the **GNU Affero General Public License v3.0** — see the [LICENSE](LICENSE) file for details.
+
+## Author
+
+**Prof. Lionel Birglen**
+Polytechnique Montréal
+[lionel.birglen@polymtl.ca](mailto:lionel.birglen@polymtl.ca)
