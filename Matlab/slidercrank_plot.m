@@ -54,6 +54,7 @@ else
     fs_label        = 10;
 end
 
+[a, b, c, slider_angle] = sc_parse_geo_plot(geo);
 gs_len = max(a,b) * 0.1125;   % ground symbol size
 
 % --- Prepare axes -----------------------------------------------------
@@ -78,7 +79,6 @@ if numel(inputs) < 2
     error('slidercrank_plot:BadInputs','INPUTS needs [value, config].');
 end
 config       = inputs(2);
-[a, b, c, slider_angle] = sc_parse_geo_plot(geo);
 ls = '-';
 if isfield(opts,'lineStyle'), ls = opts.lineStyle; end
 
@@ -86,10 +86,10 @@ if isfield(opts,'lineStyle'), ls = opts.lineStyle; end
 switch mode
     case {'direct','d'}
         phi = inputs(1);
-        sol = slidercrank_direct_kinematics(a, b, c, phi, slider_angle, config);
+        sol = slidercrank_direct_kinematics(geo, phi, config);
     case {'inverse','i'}
         x_s = inputs(1);
-        sol  = slidercrank_inverse_kinematics(a, b, c, x_s, config, slider_angle);
+        sol  = slidercrank_inverse_kinematics(geo, x_s, config);
     otherwise
         error('slidercrank_plot:BadMode','MODE must be ''direct'' or ''inverse''.');
 end
@@ -134,9 +134,9 @@ end
 if isfield(opts,'showBoth') && opts.showBoth
     switch mode
         case {'direct','d'}
-            sol2 = slidercrank_direct_kinematics(a, b, c, phi, slider_angle, -config);
+            sol2 = slidercrank_direct_kinematics(geo, phi, -config);
         case {'inverse','i'}
-            sol2 = slidercrank_inverse_kinematics(a, b, c, x_s, -config, slider_angle);
+            sol2 = slidercrank_inverse_kinematics(geo, x_s, -config);
     end
     if sol2.valid
         opts2            = opts;

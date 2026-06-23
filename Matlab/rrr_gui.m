@@ -352,7 +352,7 @@ updatePlot([],[]);
     function updatePlot(~,~)
         data = guidata(hFig);
         try
-            geo = readGeo();
+            geo = readGeo(); L1=geo.L1; L2=geo.L2; L3=geo.L3;
             R   = (L1+L2+L3) * 1.1;
             lim = [-R R -R R];
             data.limits = lim;
@@ -485,7 +485,7 @@ updatePlot([],[]);
                 set(data.dirSl(k),'Value',th);
             end
         else
-            geo = readGeo();
+            geo = readGeo(); L1=geo.L1; L2=geo.L2; L3=geo.L3;
             R  = L1+L2+L3;
             Px = data.inv_offset(1) + (R*0.3)*sin(0.7*(tnow-data.time_offset));
             Px = max(-R, min(R, Px));

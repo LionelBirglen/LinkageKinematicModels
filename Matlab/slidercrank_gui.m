@@ -438,7 +438,7 @@ updatePlot([],[]);
             phi = mod(data.phi_offset + speed*(tnow-data.time_offset) + 180, 360) - 180;
             set(data.dirSl(1),'Value',phi);
         else
-            [geo,a,b,c,~] = readGeo();
+            [geo,a,b,c,sang] = readGeo();
             xP_min = -(a+b) + c;  % min x_P = min x_B + c
             xP_max =  (a+b) + c;  % max x_P = max x_B + c
             xP_mid = (xP_min + xP_max) / 2;
