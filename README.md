@@ -217,6 +217,6 @@ All files are released under the **GNU Affero General Public License v3.0** — 
 
 ## Author
 
-**Prof. Lionel Birglen**
-Polytechnique Montréal
+Prof. Lionel Birglen<br/>
+Polytechnique Montréal<br/>
 [lionel.birglen@polymtl.ca](mailto:lionel.birglen@polymtl.ca)
