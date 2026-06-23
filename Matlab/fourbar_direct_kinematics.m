@@ -26,8 +26,12 @@ function sol = fourbar_direct_kinematics(geo, theta, config)
 %     r_P     = [x_P, y_P] coordinates of point P on coupler
 %
 % USAGE EXAMPLE:
-%   geo = [.81, .88, .92, 1.51, .8, pi/6, -10*pi/180]; theta = deg2rad(106);
-%   fourbar_direct_kinematics(geo, theta)
+%   % Vector form (backward compatible):
+%   geo = [.81, .88, .92, 1.51, .8, pi/6, -10*pi/180];
+%   fourbar_direct_kinematics(geo, deg2rad(106))
+%   % Struct form:
+%   geo = struct('a',.81,'b',.88,'c',.92,'d',1.51,'e',.8,'epsilon',pi/6,'delta',-10*pi/180);
+%   fourbar_direct_kinematics(geo, deg2rad(106))
 %
 % BY:
 % Prof. Lionel Birglen
@@ -37,14 +41,25 @@ function sol = fourbar_direct_kinematics(geo, theta, config)
 %
 % Code provided under GNU Affero General Public License v3.0
 
-% Unpack geometry
-a       = geo(1);   % output link O→A
-b       = geo(2);   % coupler link B→A
-c       = geo(3);   % input crank C→B
-d       = geo(4);   % ground link O→C
-e       = geo(5);   % distance A→P along coupler
-epsilon = geo(6);   % angle between coupler (B→A) and A→P (rad)
-delta   = geo(7);   % angle of ground link O→C (rad)
+% Parse geometry (accepts struct with fields a,b,c,d,e,epsilon,delta
+% OR numeric vector [a b c d e epsilon delta] for backward compatibility)
+if isstruct(geo)
+    a       = geo.a;
+    b       = geo.b;
+    c       = geo.c;
+    d       = geo.d;
+    e       = geo.e;
+    epsilon = geo.epsilon;
+    delta   = geo.delta;
+else
+    a       = geo(1);   % output link O→A
+    b       = geo(2);   % coupler link B→A
+    c       = geo(3);   % input crank C→B
+    d       = geo(4);   % ground link O→C
+    e       = geo(5);   % distance A→P along coupler
+    epsilon = geo(6);   % angle between coupler (B→A) and A→P (rad)
+    delta   = geo(7);   % angle of ground link O→C (rad)
+end
 
 %— Define fixed pivots in world frame —
 O = [0, 0];                         % ground pivot at O

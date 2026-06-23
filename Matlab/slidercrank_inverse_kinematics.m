@@ -1,106 +1,94 @@
-function [phi, B] = slidercrank_inverse_kinematics(a, b, x_slider, config, slider_angle)
-% SLIDERCRANK_INVERSE_KINEMATICS - Compute inverse kinematics of a planar slider-crank mechanism
-%
-% OBJECTIVE:
-%   Determine the crank angle and crank-coupler joint coordinates needed
-%   to achieve a specified slider displacement along an adjustable
-%   prismatic axis in a slider-crank mechanism.
+function sol = slidercrank_inverse_kinematics(geo, x_slider, config)
+% SLIDERCRANK_INVERSE_KINEMATICS - Inverse kinematics of a planar slider-crank mechanism
 %
 % INPUTS:
-%   a            - length of crank link (units, e.g., mm)
-%   b            - length of coupler link (units, e.g., mm)
-%   x_slider     - desired scalar displacement of slider along its axis
-%   config       - +1 for elbow-down configuration, -1 for elbow-up
-%   slider_angle - orientation of prismatic joint axis relative to base (rad)
+%   geo      - geometry struct or vector:
+%              Struct fields: .a (crank), .b (coupler), .c (extension B->P),
+%                             .slider_angle (prismatic axis angle, rad)
+%              Vector form:   [a, b, c, slider_angle]
+%   x_slider - desired slider displacement of B along its axis
+%   config   - +1 elbow-down, -1 elbow-up
 %
-% OUTPUTS:
-%   phi - computed crank angle relative to base frame (rad)
-%   B   - 1x2 [x, y] position of crank-coupler joint
+% OUTPUT:
+%   sol - struct with fields:
+%     .Positions.O   - [x;y] fixed ground revolute (always [0;0])
+%     .Positions.A   - [x;y] crank-coupler revolute (end of crank)
+%     .Positions.B   - [x;y] coupler-slider pin (on rail)
+%     .Positions.P   - [x;y] end of extension link B->P
+%     .phi           - crank angle (rad)
+%     .x_slider      - slider displacement (same as input)
+%     .slider_dir    - [cos;sin] unit vector along slider axis
+%     .valid         - true if solution exists
 %
 % USAGE EXAMPLE:
-%   [phi, B] = slidercrank_inverse_kinematics(70, 100, 50, -1, deg2rad(30))
-%        phi =
-%           -1.4277
-%        B =
-%            9.9795  -69.2850
+%   geo = struct('a',70,'b',100,'c',30,'slider_angle',0);
+%   sol = slidercrank_inverse_kinematics(geo, 136, 1)
+%     sol.phi = 0.7854  (rad, approx deg2rad(45))
+%     sol.valid = true
 %
-% BY: 
+% BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Last Update: 2025/05/15
 % Contact: lionel.birglen@polymtl.ca
-% 
 % Code provided under GNU Affero General Public License v3.0
 
+[a, b, c, slider_angle] = sc_parse_geo(geo);
 
-% Ground pivot at origin
-O = [0, 0];
+O          = [0; 0];
+slider_dir = [cos(slider_angle); sin(slider_angle)];
+B          = x_slider * slider_dir;
 
-% Unit vector along slider axis
-slider_vec = [cos(slider_angle), sin(slider_angle)];
+sol.Positions.O  = O;
+sol.Positions.A  = [NaN; NaN];
+sol.Positions.B  = B;
+sol.Positions.P  = B + c * slider_dir;
+sol.phi          = NaN;
+sol.x_slider     = x_slider;
+sol.slider_dir   = slider_dir;
+sol.valid        = false;
 
-% Slider joint coordinate in base frame
-P = x_slider * slider_vec;
+[A1, A2, valid] = sc_circle_intersections(O, a, B, b);
+if ~valid, return; end
 
-% Compute intersections of circles:
-%   Circle1: centered at O, radius = a (crank reach)
-%   Circle2: centered at P, radius = b (coupler reach)
-[B1, B2, valid] = circle_intersections(O, a, P, b);
-if ~valid
-    error('Slider-crank cannot close — invalid geometry.');
+A   = sc_ternary(config == 1, A1, A2);
+phi = atan2(A(2) - O(2), A(1) - O(1));
+phi = atan2(sin(phi), cos(phi));
+
+sol.Positions.A = A;
+sol.Positions.B = B;
+sol.Positions.P = B + c * slider_dir;
+sol.phi         = phi;
+sol.valid       = true;
 end
 
-% Select crank-coupler joint position based on config
-B = ternary(config == 1, B1, B2);
-
-% Compute crank angle from origin to joint B
-vec_OB = B - O;
-phi    = atan2(vec_OB(2), vec_OB(1));
-% Normalize angle to [-pi, pi]
-phi    = atan2(sin(phi), cos(phi));
+function [a, b, c, slider_angle] = sc_parse_geo(geo)
+if isnumeric(geo)
+    if numel(geo) < 4
+        error('slidercrank_inverse_kinematics:BadGeo','geo vector must have 4 elements [a b c slider_angle].');
+    end
+    g = geo(:).';
+    a = g(1); b = g(2); c = g(3); slider_angle = g(4);
+elseif isstruct(geo)
+    a = geo.a; b = geo.b; c = geo.c; slider_angle = geo.slider_angle;
+else
+    error('slidercrank_inverse_kinematics:BadGeo','geo must be a numeric vector [a b c slider_angle] or a struct.');
+end
 end
 
-% Helper: intersect two circles
-function [P1, P2, valid] = circle_intersections(c1, r1, c2, r2)
-% CIRCLE_INTERSECTIONS - Compute intersection points of two circles
-%
-% INPUTS:
-%   c1, r1 - center and radius of first circle
-%   c2, r2 - center and radius of second circle
-%
-% OUTPUTS:
-%   P1, P2 - 1x2 coordinates of intersection points
-%   valid  - true if intersection exists, false otherwise
-
-d = norm(c2 - c1);  % distance between centers
-% Check for valid intersection
+function [P1, P2, valid] = sc_circle_intersections(c1, r1, c2, r2)
+d = norm(c2 - c1);
 if d > (r1 + r2) || d < abs(r1 - r2)
-    P1 = []; P2 = []; valid = false;
-    return;
+    P1 = [0;0]; P2 = [0;0]; valid = false; return;
 end
-
-% Distance from c1 to chord along center line
-a = (r1^2 - r2^2 + d^2) / (2 * d);
-% Height from chord to intersection points
-h = sqrt(r1^2 - a^2);
-
-% Base point on line between centers
-p2 = c1 + a * (c2 - c1) / d;
-
-% Offset vector perpendicular to line for intersections
-offset = h * [0 -1; 1 0] * (c2 - c1)' / d;
-P1 = p2 + offset';
-P2 = p2 - offset';
+a_val = (r1^2 - r2^2 + d^2) / (2 * d);
+h     = sqrt(max(0, r1^2 - a_val^2));
+p2    = c1 + a_val * (c2 - c1) / d;
+perp  = h * [0 -1; 1 0] * (c2 - c1) / d;
+P1    = p2 + perp;
+P2    = p2 - perp;
 valid = true;
 end
 
-% Helper: ternary operator
-function out = ternary(cond, aVar, bVar)
-% TERNARY - Return one of two values based on condition
-%   cond ? aVar : bVar
-if cond
-    out = aVar;
-else
-    out = bVar;
-end
+function out = sc_ternary(cond, a, b)
+if cond, out = a; else, out = b; end
 end

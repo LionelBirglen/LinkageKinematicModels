@@ -29,7 +29,12 @@ function sol = fourbar_inverse_kinematics(geo, alpha)
 %
 %
 % USAGE EXAMPLE:
-%     geo = [81, 88, 92, 151, 10, pi/6, 0];alpha = deg2rad(10);config = +1;[theta, phi, A, r_P] = fourbar_inverse_kinematics(geo, alpha, config)
+%   % Vector form (backward compatible):
+%   geo = [81, 88, 92, 151, 10, pi/6, 0];
+%   fourbar_inverse_kinematics(geo, deg2rad(10))
+%   % Struct form:
+%   geo = struct('a',81,'b',88,'c',92,'d',151,'e',10,'epsilon',pi/6,'delta',0);
+%   fourbar_inverse_kinematics(geo, deg2rad(10))
 %        theta =
 %           1.8409
 %        phi =
@@ -48,14 +53,25 @@ function sol = fourbar_inverse_kinematics(geo, alpha)
 % Code provided under GNU Affero General Public License v3.0
 
 
-%--- Unpack geometry ---
-a       = geo(1);   % output link O→A
-b       = geo(2);   % coupler link B→A
-c       = geo(3);   % input crank C→B
-d       = geo(4);   % ground link O→C
-e       = geo(5);   % distance A→P along coupler
-epsilon = geo(6);   % angle between coupler (A→B) and A→P (rad)
-delta   = geo(7);   % angle locating C: C = [d*cos(delta), d*sin(delta)]
+% Parse geometry (accepts struct with fields a,b,c,d,e,epsilon,delta
+% OR numeric vector [a b c d e epsilon delta] for backward compatibility)
+if isstruct(geo)
+    a       = geo.a;
+    b       = geo.b;
+    c       = geo.c;
+    d       = geo.d;
+    e       = geo.e;
+    epsilon = geo.epsilon;
+    delta   = geo.delta;
+else
+    a       = geo(1);   % output link O→A
+    b       = geo(2);   % coupler link B→A
+    c       = geo(3);   % input crank C→B
+    d       = geo(4);   % ground link O→C
+    e       = geo(5);   % distance A→P along coupler
+    epsilon = geo(6);   % angle between coupler (A→B) and A→P (rad)
+    delta   = geo(7);   % angle locating C: C = [d*cos(delta), d*sin(delta)]
+end
 
 %--- Ground pivots ---
 O = [0, 0];                          %#ok<NASGU>  % kept for consistency if you use it elsewhere
