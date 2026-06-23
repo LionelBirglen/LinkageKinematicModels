@@ -5,7 +5,7 @@ Support files for the kinematic analysis of planar linkages studied in the MEC63
 ## Mechanisms Included
 
 | Mechanism | Direct Kinematics | Inverse Kinematics | Plot | GUI | Matlab | Python |
-|---|---|:---:|:---:|:---:|:---:|:---:|
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Planar Four-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
