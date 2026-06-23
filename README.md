@@ -9,6 +9,8 @@ Support files for the kinematic analysis of planar linkages studied in the MEC63
 | Planar Four-Bar Linkage | ✓ | ✓ | ✓ | ✓ |
 | Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ |
 | Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ |
+| Planar Five-Bar Linkage | ✓ | ✓ | — | ✓ |
+| Planar Stephenson III Linkage | ✓ | ✓ | — | ✓ |
 | Spherical RRR Serial Chain | ✓ | ✓ | — | ✓ |
 | Spherical Four-Bar Linkage | ✓ | ✓ | — | ✓ |
 
