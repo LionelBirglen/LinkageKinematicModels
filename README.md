@@ -214,9 +214,9 @@ All six GUIs (3 × MATLAB, 3 × Python) share the same layout and feature set:
 
 ## Screenshots
 
-![Fourbar GUI Matlab](Media/FourbarGUI_matlab.png)
-![Fourbar GUI Octave](Media/FourbarGUI_octave.png)
-![Fourbar GUI Python](Media/FourbarGUI_python.png)
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/FourbarGUI_matlab.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="350"></a> 
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/FourbarGUI_octave.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/FourbarGUI_octave.png" alt="Planar Fourbar GUI in Octave" width="350"></a> 
+<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/FourbarGUI_Python.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/FourbarGUI_Python.png" alt="Planar Fourbar GUI in Python" width="350"></a> 
 
 *Left to right: planar four-bar linkage in Matlab, Octave, and Python.*
 
