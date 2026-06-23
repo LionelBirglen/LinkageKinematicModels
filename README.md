@@ -214,7 +214,11 @@ All six GUIs (3 × MATLAB, 3 × Python) share the same layout and feature set:
 
 ## Screenshots
 
-![RRR GUI](Media/RRRGUI.png)
+![Fourbar GUI Matlab](Media/FourbarGUI_matlab.png)
+![Fourbar GUI Octave](Media/FourbarGUI_octave.png)
+![Fourbar GUI Python](Media/FourbarGUI_python.png)
+
+*Left to right: planar four-bar linkage in Matlab, Octave, and Python.*
 
 ---
 
