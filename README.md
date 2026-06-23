@@ -1,4 +1,4 @@
-# Common Linkages' Kinematic Models — MEC6319 Course and More
+# Common Linkages' Kinematic Models 
 
 Support files for the kinematic analysis of planar linkages studied in the MEC6319 course at Polytechnique Montréal. Each mechanism is provided with direct kinematics, inverse kinematics, a standalone plot function, and a fully interactive GUI — all in both **MATLAB/Octave** and **Python**.
 
