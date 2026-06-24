@@ -98,18 +98,7 @@ sol = slidercrank_direct_kinematics(geo, deg2rad(45), +1);
 | `fivebar_plot.m` | Standalone plot function — draws linkage chain, coupler triangle A-B-P, joint circles, P cross marker |
 | `fivebar_gui.m` | Interactive GUI — 8-parameter geometry, direct mode (θ1/θ2 sliders), inverse mode (Px/Py sliders), 4 solution checkboxes, animation |
 
-**Geometry input** (`geo`): 1×8 numeric vector `[a, b, c, d, e, alpha, h, eta]`:
-
-| Parameter | Description |
-|---|---|
-| `a` | Left input crank length (O→A) |
-| `b` | Left coupler / output link (A→B) |
-| `c` | Right coupler (C→B) |
-| `d` | Right input crank (D→C) |
-| `e` | Ground pivot spacing (O→D) |
-| `alpha` | Angle of O→D from x-axis (degrees) |
-| `h` | Distance A→P along output link |
-| `eta` | Angle from A→B to A→P direction (degrees) |
+**Geometry input** (`geo`): 1×8 numeric vector `[a, b, c, d, e, alpha, h, eta]`: a and d are the input cranks.
 
 ```matlab
 geo = [0.6, 0.7, 0.9, 0.6, 1.0, 0, 0.5, 45];   % [a b c d e alpha h eta]
