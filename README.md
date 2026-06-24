@@ -1,4 +1,4 @@
-# Matlab and Python Libraries for Common Linkages' Kinematic Models 
+# Matlab and Python Libraries for Common Mechanical Linkages' Kinematic Models 
 
 Support files for the kinematic analysis of linkages, some studied in the MEC6319 course at Polytechnique Montréal. Mechanisms are provided with standalone direct kinematics, inverse kinematics, and plot functions, as well as a fully interactive GUI — all in both **MATLAB/Octave** and **Python**. Complete multiple solutions of the direct and inverse kinematics are taken into account.
 
