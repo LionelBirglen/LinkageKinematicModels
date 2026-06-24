@@ -9,7 +9,7 @@ Support files for the kinematic analysis of planar linkages studied in the MEC63
 | Planar Four-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Planar Five-Bar Linkage | ✓ | ✓ | — | ✓ | ✓ | ✓ |
+| Planar Five-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Planar Stephenson III Linkage | ✓ | ✓ | — | ✓ | ✓ | — |
 | Spherical RRR Serial Chain | ✓ | ✓ | — | ✓ | ✓ | — |
 | Spherical Four-Bar Linkage | ✓ | ✓ | — | ✓ | ✓ | — |
@@ -86,12 +86,50 @@ geo = struct('a', 50, 'b', 120, 'c', 30, 'slider_angle', 0);
 sol = slidercrank_direct_kinematics(geo, deg2rad(45), +1);
 ```
 
+### Five-Bar Linkage
+
+Topology: two input cranks sharing a floating coupler. **O** (fixed) → crank a → **A** → coupler b → **B** ← coupler c ← **C** ← crank d ← **D** (fixed). Point **P** is located on link A→B at distance h from A, at angle η from the A→B direction.
+
+| File | Description |
+|---|---|
+| `fivebar_direct_kinematics.m` | Direct kinematics — given (θ1, θ2) in degrees, returns positions O, A, B, C, D, P and coupler orientation φ for both assembly modes |
+| `fivebar_inverse_kinematics.m` | Inverse kinematics — given desired position of P, returns up to 4 solutions with joint angles (θ1, θ2) |
+| `fivebar_plot.m` | Standalone plot function — draws linkage chain, coupler triangle A-B-P, joint circles, P cross marker |
+| `fivebar_gui.m` | Interactive GUI — 8-parameter geometry, direct mode (θ1/θ2 sliders), inverse mode (Px/Py sliders), 4 solution checkboxes, animation |
+
+**Geometry input** (`geo`): 1×8 numeric vector `[a, b, c, d, e, alpha, h, eta]`:
+
+| Parameter | Description |
+|---|---|
+| `a` | Left input crank length (O→A) |
+| `b` | Left coupler / output link (A→B) |
+| `c` | Right coupler (C→B) |
+| `d` | Right input crank (D→C) |
+| `e` | Ground pivot spacing (O→D) |
+| `alpha` | Angle of O→D from x-axis (degrees) |
+| `h` | Distance A→P along output link |
+| `eta` | Angle from A→B to A→P direction (degrees) |
+
+```matlab
+geo = [0.6, 0.7, 0.9, 0.6, 1.0, 0, 0.5, 45];   % [a b c d e alpha h eta]
+theta = [120, 75];                                 % input crank angles (degrees)
+sol = fivebar_direct_kinematics(geo, theta);
+% sol(1) and sol(2) are the two assembly modes
+disp(sol(1).P)        % coordinates of coupler point P
+disp(sol(1).phi)      % orientation of output link (degrees)
+
+% Inverse kinematics: up to 4 solutions
+P_des = [0.2; 1.0];
+invSol = fivebar_inverse_kinematics(geo, P_des);
+```
+
 ### Running the GUIs
 
 ```matlab
 fourbar_gui        % Four-Bar Linkage
 rrr_gui            % Planar RRR Serial Chain
 slidercrank_gui    % Slider-Crank Linkage
+fivebar_gui        % Five-Bar Linkage
 ```
 
 All GUIs feature:
@@ -137,12 +175,22 @@ pip install numpy matplotlib
 | `slidercrank_plot.py` | Plot function — `slidercrank_plot(geo, mode, inputs, opts, ax)` |
 | `slidercrank_gui.py` | Tkinter GUI — matches MATLAB layout |
 
+### Five-Bar Linkage
+
+| File | Description |
+|---|---|
+| `fivebar_direct_kinematics.py` | Direct kinematics — returns list of 2 solution dicts (one per assembly mode) |
+| `fivebar_inverse_kinematics.py` | Inverse kinematics — returns list of 0–4 solution dicts |
+| `fivebar_plot.py` | Plot function — `fivebar_plot(geo, mode, inputs, opts, ax)` |
+| `fivebar_gui.py` | Tkinter GUI — matches MATLAB layout |
+
 ### Running the Python GUIs
 
 ```bash
 python fourbar_gui.py
 python rrr_gui.py
 python slidercrank_gui.py
+python fivebar_gui.py
 ```
 
 ### Python API Example
@@ -153,6 +201,8 @@ import numpy as np
 from fourbar_direct_kinematics import fourbar_direct_kinematics
 from rrr_inverse_kinematics import rrr_inverse_kinematics
 from slidercrank_direct_kinematics import slidercrank_direct_kinematics
+from fivebar_direct_kinematics import fivebar_direct_kinematics
+from fivebar_inverse_kinematics import fivebar_inverse_kinematics
 
 # Four-bar
 geo = np.array([0.81, 0.88, 0.92, 1.51, 0.80, math.pi/6, -10*math.pi/180])
@@ -169,6 +219,17 @@ geo = {'a': 50, 'b': 120, 'c': 30, 'slider_angle': 0}
 sol = slidercrank_direct_kinematics(geo['a'], geo['b'], geo['c'],
                                     math.radians(45), geo['slider_angle'], config=+1)
 print(sol['x_slider'])
+
+# Five-bar
+geo = np.array([0.6, 0.7, 0.9, 0.6, 1.0, 0, 0.5, 45])
+sols = fivebar_direct_kinematics(geo, [120, 75])
+print(sols[0]['P'])      # coupler point, assembly mode 1
+print(sols[0]['phi'])    # output link orientation (degrees)
+
+inv = fivebar_inverse_kinematics(geo, [0.2, 1.0])
+print(f"{len(inv)} solutions found")
+for s in inv:
+    print(s['theta'])    # [theta1, theta2] in degrees
 ```
 
 ### Solution Dictionaries
