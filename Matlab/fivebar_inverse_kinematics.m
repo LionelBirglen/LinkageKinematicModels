@@ -97,8 +97,6 @@ function invSol = fivebar_inverse_kinematics(geo, P_des)
     % 1) Find intersection A between circle(O,a) and circle(P,h)
     [A1, A2, okA] = circleCircleIntersect(0, 0, a, Px, Py, h);
     if ~okA
-        error('Five-bar cannot close: invalid geometry or inputs.');
-        
         % No feasible A; return empty set
         return;
     end

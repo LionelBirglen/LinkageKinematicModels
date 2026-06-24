@@ -122,9 +122,6 @@ d_AC = norm(C - A);
 %   circle1: center A, radius b
 %   circle2: center C, radius c
 if (d_AC > (b + c)) || (d_AC < abs(b - c)) || (d_AC == 0 && b == c)
-
-    error('Five-bar cannot close: invalid geometry or inputs.');
-
     % No valid intersection → both solutions invalid
     for k = 1:2
         sol(k).Positions.O    = O;
