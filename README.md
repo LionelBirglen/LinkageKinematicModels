@@ -34,7 +34,7 @@ LinkageKinematicModels/
 
 ## MATLAB / Octave
 
-All files are compatible with both **MATLAB** (R2019b or later recommended) and **GNU Octave** (6.x or later). No additional toolboxes are required.
+All files are intended to be 100% compatible with both **MATLAB** (R2019b or later recommended) and **GNU Octave** (6.x or later). No additional toolboxes are required.
 
 ### Four-Bar Linkage
 
