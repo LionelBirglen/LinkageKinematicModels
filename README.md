@@ -1,18 +1,18 @@
 # Matlab and Python Libraries for Common Linkages' Kinematic Models 
 
-Support files for the kinematic analysis of linkages, some studied in the MEC6319 course at Polytechnique Montréal. Mechanisms are provided with standalone direct kinematics, inverse kinematics, and plot functions, as well as a fully interactive GUI — all in both **MATLAB/Octave** and **Python**. All matlab functions were checked to be 100% compatible with Octave.
+Support files for the kinematic analysis of linkages, some studied in the MEC6319 course at Polytechnique Montréal. Mechanisms are provided with standalone direct kinematics, inverse kinematics, and plot functions, as well as a fully interactive GUI — all in both **MATLAB/Octave** and **Python**. 
 
 ## Mechanisms Included
 
-| Mechanism | Direct Kinematics | Inverse Kinematics | Plot | GUI | Matlab | Python |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Planar Four-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Planar Five-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Planar Stephenson III Linkage* | ✓ | ✓ | — | ✓ | ✓ | — |
-| Spherical RRR Serial Chain* | ✓ | ✓ | — | ✓ | ✓ | — |
-| Spherical Four-Bar Linkage* | ✓ | ✓ | — | ✓ | ✓ | — |
+| Mechanism | Direct Kinematics | Inverse Kinematics | Plot | GUI | Matlab | Octave | Python |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Planar Four-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Planar Five-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Planar Stephenson III Linkage* | ✓ | ✓ | — | ✓ | ✓ | — | — |
+| Spherical RRR Serial Chain* | ✓ | ✓ | — | ✓ | ✓ | — | — |
+| Spherical Four-Bar Linkage* | ✓ | ✓ | — | ✓ | ✓ | — | — |
 
 *: preliminary versions, not as well polished as prevous linkages.<br/>
 For mechanism definition, points, angles, and lengths convention see gui files.
