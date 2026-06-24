@@ -44,7 +44,7 @@ All files are compatible with both **MATLAB** (R2019b or later recommended) and 
 | `fourbar_plot.m` | Standalone plot function — draws the linkage with ground symbols, joint circles, coupler triangle, and P marker |
 | `fourbar_gui.m` | Interactive GUI — 900×600 window with geometry inputs, direct/inverse mode, display-solutions checkboxes, P trajectory, animation, session save/load, PNG export |
 
-**Geometry input** (`geo`): accepts a numeric vector `[a, b, c, d, e, ε, δ]` (backward-compatible) **or** a struct with fields `.a .b .c .d .e .epsilon .delta`. Angles ε and δ in radians.
+**Geometry input** (`geo`): accepts a numeric vector `[a, b, c, d, e, ε, δ]` (backward-compatible with previous versions of this repository) **or** a struct with fields `.a .b .c .d .e .epsilon .delta`. Angles ε and δ in radians.
 
 ```matlab
 % Vector form
