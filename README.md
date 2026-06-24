@@ -91,8 +91,6 @@ sol = slidercrank_direct_kinematics(geo, deg2rad(45), +1);
 
 ### Five-Bar Linkage
 
-Topology: two input cranks sharing a floating coupler. **O** (fixed) → crank a → **A** → coupler b → **B** ← coupler c ← **C** ← crank d ← **D** (fixed). Point **P** is located on link A→B at distance h from A, at angle η from the A→B direction.
-
 | File | Description |
 |---|---|
 | `fivebar_direct_kinematics.m` | Direct kinematics — given (θ1, θ2) in degrees, returns positions O, A, B, C, D, P and coupler orientation φ for both assembly modes |
