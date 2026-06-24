@@ -14,7 +14,7 @@ Support files for the kinematic analysis of linkages, some studied in the MEC631
 | Spherical RRR Serial Chain* | ✓ | ✓ | — | ✓ | ✓ | — | — |
 | Spherical Four-Bar Linkage* | ✓ | ✓ | — | ✓ | ✓ | — | — |
 
-*: preliminary versions, not as well polished as prevous linkages.<br/>
+*: preliminary versions, not as well polished as other linkages.<br/>
 For mechanism definition, points, angles, and lengths convention see gui files.
 
 ---
