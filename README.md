@@ -13,6 +13,7 @@ Support files for the kinematic analysis of planar linkages studied in the MEC63
 | Planar Stephenson III Linkage* | ✓ | ✓ | — | ✓ | ✓ | — |
 | Spherical RRR Serial Chain* | ✓ | ✓ | — | ✓ | ✓ | — |
 | Spherical Four-Bar Linkage* | ✓ | ✓ | — | ✓ | ✓ | — |
+
 *: preliminary versions, not as well polished as prevous linkages.
 
 ---
