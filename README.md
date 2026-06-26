@@ -254,7 +254,7 @@ All kinematics functions return dicts (Python) or structs (MATLAB) with a common
 
 ## Screenshots
 
-<a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/FourbarGUI_matlab.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="350"></a> 
+<a href="./Media/FourbarGUI_matlab.png"><img src="./Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="350"></a> 
 <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/FourbarGUI_octave.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/FourbarGUI_octave.png" alt="Planar Fourbar GUI in Octave" width="350"></a> 
 <a href="/LionelBirglen/LinkageKinematicModels/blob/main/Media/FourbarGUI_Python.png"><img src="https://github.com/LionelBirglen/LinkageKinematicModels/raw/main/Media/FourbarGUI_Python.png" alt="Planar Fourbar GUI in Python" width="350"></a> 
 
@@ -269,5 +269,4 @@ All files are released under the **GNU Affero General Public License v3.0** — 
 ## Author
 
 Prof. Lionel Birglen<br/>
-Polytechnique Montréal<br/>
-[lionel.birglen@polymtl.ca](mailto:lionel.birglen@polymtl.ca)
+Polytechnique Montréal
