@@ -254,9 +254,9 @@ All kinematics functions return dicts (Python) or structs (MATLAB) with a common
 
 ## Screenshots
 
-<a href="./Media/FourbarGUI_matlab.png"><img src="./Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="300"></a> 
-<a href="./Media/FourbarGUI_octave.png"><img src="./Media/FourbarGUI_octave.png" alt="Planar Fourbar GUI in Octave" width="300"></a> 
-<a href="./Media/FourbarGUI_Python.png"><img src="./Media/FourbarGUI_Python.png" alt="Planar Fourbar GUI in Python" width="300"></a> 
+<a href="./Media/FourbarGUI_matlab.png"><img src="./Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="250"></a> 
+<a href="./Media/FourbarGUI_octave.png"><img src="./Media/FourbarGUI_octave.png" alt="Planar Fourbar GUI in Octave" width="250"></a> 
+<a href="./Media/FourbarGUI_Python.png"><img src="./Media/FourbarGUI_Python.png" alt="Planar Fourbar GUI in Python" width="250"></a> 
 
 *Left to right: planar four-bar linkage in Matlab, Octave, and Python.*
 
