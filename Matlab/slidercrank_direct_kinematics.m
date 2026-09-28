@@ -5,7 +5,9 @@ function sol = slidercrank_direct_kinematics(geo, phi, config)
 %   geo    - geometry struct or vector:
 %            Struct fields: .a (crank), .b (coupler), .c (extension B->P),
 %                           .slider_angle (prismatic axis angle, rad)
-%            Vector form:   [a, b, c, slider_angle]
+%                           .h_q (distance A->Q along coupler, default 0)
+%                           .eta_q (angle from AB to AQ, rad, default 0)
+%            Vector form:   [a, b, c, slider_angle] (h_q/eta_q via struct only)
 %   phi    - crank angle relative to base frame (rad)
 %   config - +1 elbow-down, -1 elbow-up (default +1)
 %
@@ -15,6 +17,7 @@ function sol = slidercrank_direct_kinematics(geo, phi, config)
 %     .Positions.A   - [x;y] crank-coupler revolute (end of crank)
 %     .Positions.B   - [x;y] coupler-slider pin (moves along rail)
 %     .Positions.P   - [x;y] end of extension link B->P
+%     .Positions.Q   - [x;y] point on coupler AB (distance h_q from A, angle eta_q from AB)
 %     .x_slider      - scalar displacement of B along slider axis
 %     .phi           - crank angle (rad), same as input
 %     .slider_dir    - [cos;sin] unit vector along slider axis
@@ -31,11 +34,9 @@ function sol = slidercrank_direct_kinematics(geo, phi, config)
 % BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Contact: lionel.birglen@polymtl.ca
-% Code provided under GNU Affero General Public License v3.0
 
 if nargin < 3, config = +1; end
-[a, b, c, slider_angle] = sc_parse_geo(geo);
+[a, b, c, slider_angle, h_q, eta_q] = sc_parse_geo(geo);
 
 O = [0; 0];
 A = a * [cos(phi); sin(phi)];
@@ -51,6 +52,7 @@ sol.Positions.O  = O;
 sol.Positions.A  = [NaN; NaN];
 sol.Positions.B  = [NaN; NaN];
 sol.Positions.P  = [NaN; NaN];
+sol.Positions.Q  = [NaN; NaN];
 sol.x_slider     = NaN;
 sol.phi          = phi;
 sol.slider_dir   = slider_dir;
@@ -66,22 +68,29 @@ B2 = perp_point - along_dist * slider_dir;
 B  = sc_ternary(config == 1, B1, B2);
 P  = B + c * slider_dir;
 
+% Coupler point Q: distance h_q from A, angle eta_q from A→B direction
+phi_AB = atan2(B(2)-A(2), B(1)-A(1));
+Q = A + h_q * [cos(phi_AB + eta_q); sin(phi_AB + eta_q)];
 sol.Positions.A = A;
 sol.Positions.B = B;
 sol.Positions.P = P;
+sol.Positions.Q = Q;
 sol.x_slider    = dot(B - O, slider_dir);
 sol.valid       = true;
 end
 
-function [a, b, c, slider_angle] = sc_parse_geo(geo)
+function [a, b, c, slider_angle, h_q, eta_q] = sc_parse_geo(geo)
 if isnumeric(geo)
     if numel(geo) < 4
         error('slidercrank_direct_kinematics:BadGeo','geo vector must have 4 elements [a b c slider_angle].');
     end
     g = geo(:).';
     a = g(1); b = g(2); c = g(3); slider_angle = g(4);
+    h_q = 0; eta_q = 0;
 elseif isstruct(geo)
     a = geo.a; b = geo.b; c = geo.c; slider_angle = geo.slider_angle;
+    h_q   = 0; if isfield(geo,'h_q'),   h_q   = geo.h_q;   end
+    eta_q = 0; if isfield(geo,'eta_q'), eta_q = geo.eta_q; end
 else
     error('slidercrank_direct_kinematics:BadGeo','geo must be a numeric vector [a b c slider_angle] or a struct.');
 end

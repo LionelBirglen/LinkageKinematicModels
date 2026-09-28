@@ -2,7 +2,7 @@ function sols = stephensonIII_inverse_kinematics(geo, thetaB)
 % stephensonIII_inverse_kinematics - Inverse kinematics for Stephenson III six-bar linkage
 %
 % INPUTS:
-%   geo     : [OA, Bx, By, OC, CD, DA, BE, EM, DM, MP, eta, delta]
+%   geo     : [OA, Bx, By, OC, CD, DA, BF, FE, DE, EP, eta, delta]
 %             where
 %                OA   - O to A (along x-axis)
 %                Bx   - x coordinate of B
@@ -10,394 +10,232 @@ function sols = stephensonIII_inverse_kinematics(geo, thetaB)
 %                OC   - O to C (input crank)
 %                CD   - C to D
 %                DA   - D to A
-%                BE   - B to E
-%                EM   - E to M
-%                DM   - D to M (new parameter)
-%                MP   - M to P (output point, as before)
-%                eta  - angle (deg) from ME to MP (positive CCW)
-%                delta - angle (deg) from CD to CM, measured at C (positive CCW)
-%   thetaB  : Angle of BE relative to x-axis (deg, CCW, desired output)
+%                BF   - B to F
+%                FE   - F to E
+%                DE   - D to E
+%                EP   - E to P (output point)
+%                eta  - angle (deg) from EF to EP (positive CCW)
+%                delta - angle (deg) of body C-D-E, same definition as in
+%                        stephensonIII_direct_kinematics
+%   thetaB  : angle (deg, CCW) of BF, measured from the direction of the
+%             vector O->B (same convention as before)
 %
 % OUTPUTS:
-%   sols    : Structure array with one entry per valid assembly solution.
-%             Each sols(i) contains:
-%                .Positions.O  - [x;y] position of O (origin)
-%                .Positions.A  - [x;y] position of A (on x-axis)
-%                .Positions.B  - [x;y] position of B (ground)
-%                .Positions.C  - [x;y] position of C (end of input crank)
-%                .Positions.D  - [x;y] position of D
-%                .Positions.E  - [x;y] position of E
-%                .Positions.M  - [x;y] position of M (end of output link)
-%                .Positions.P  - [x;y] position of output point P
-%                .Angles.thetaC    - angle of CD w.r.t. CO at C (deg)
-%                .Angles.thetaD    - angle of DA w.r.t. DC at D (deg)
-%                .Angles.thetaE    - angle of EM w.r.t. EB at E (deg)
-%                .Angles.thetaA    - angle of AB w.r.t. AO at A (deg)
-%                .Angles.thetaB    - angle of BE w.r.t. BO at B (deg)
-%                .Angles.thetaM    - angle of MP w.r.t. ME at M (deg)
-%                .Angles.thetaO    - angle of OC w.r.t. OA at O (deg)
-%                .Angles.theta_CM  - angle of CM w.r.t. x-axis (deg)
-%                .Angles.theta_MP  - angle of MP w.r.t. x-axis (deg)
-%                .theta_EM         - angle of EM (E to M) w.r.t. x-axis (deg)
-%                .valid            - 1 if solution is valid, 0 otherwise
+%   sols    : Structure array with one entry per REAL assembly, i.e. every
+%             configuration in which all links close (OC, CD, DA, BF, FE
+%             and the bodies C-D-E and F-E-P). Same fields as before:
+%                .Positions.O .A .B .C .D .F .E .P  - [x;y]
+%                .Angles.thetaC  .thetaD  .thetaF  .thetaA  .thetaB
+%                       .thetaE  .thetaO  .theta_CE .theta_EP  (deg)
+%                .theta_FE  - angle of FE w.r.t. x-axis (deg)
+%                .valid     - 1
+%                .thetaO    - input crank angle (deg, in (-180,180])
+%                .thetaB    - thetaB, same as input
+%             Entries are sorted by thetaO. Each one is also a solution of
+%             stephensonIII_direct_kinematics(geo, thetaO).
 %
-%   If no solution exists, sols is a structure with .valid = 0 and all other fields NaN.
+%   If no solution exists, sols is a structure with .valid = 0 and all
+%   other fields NaN (except .thetaB).
 %
-%   All angles are in degrees, positive CCW from the reference vector.
+% METHOD:
+%   With thetaB given, F is fixed. For each of the two assembly modes of
+%   the four-bar O-C-D-A (branches of D, same ordering as the direct
+%   kinematics), E traces the coupler curve of body C-D-E as the crank
+%   turns. The solutions are the crank angles at which |E - F| = FE.
+%   They are bracketed by a dense sweep of thetaO (to which the crank's
+%   exact limit angles are added, so roots next to a limit are not
+%   missed) and refined with fzero. Every candidate is built with the
+%   same formulas as stephensonIII_direct_kinematics, so D always lies at
+%   distance DA from A. At most 6 real solutions can exist (circle vs.
+%   tricircular sextic coupler curve).
 %
-% geo = [40, 70, 30, 50, 20, 50, 30, 30, -30, 20, 30, 60]; thetaB = 69; sols = stephensonIII_inverse_kinematics(geo, thetaB)
-% sols = 
-%   4×1 struct array with fields:
-%     Positions
-%     Angles
-%     theta_EM
-%     valid
-%     thetaO
-%     thetaB
-% 
-% sols.thetaO
-% ans =
-%    72.7801
-% ans =
-%    47.2390
-% ans =
-%    89.9958
-% ans =
-%    29.0143
+% EXAMPLE:
+%   geo = [40, 70, 30, 50, 20, 50, 30, 30, -30, 20, 30, 60];
+%   sols = stephensonIII_inverse_kinematics(geo, 69);
+%   [sols.thetaO]      % -> 47.24  90.00  (the two real assemblies)
 
-OA    = geo(1);
-Bx    = geo(2);
-By    = geo(3);
-OC    = geo(4);
-CD    = geo(5);
-DA    = geo(6);
-BE    = geo(7);
-EM    = geo(8);
-DM    = geo(9);
-MP    = geo(10);
-eta   = geo(11);
-delta = geo(12);
+OA = geo(1);  Bx = geo(2);  By = geo(3);
+OC = geo(4);  CD = geo(5);  DA = geo(6);
+BF = geo(7);  FE = geo(8);  DE = geo(9);
+EP = geo(10); eta = geo(11); delta = geo(12);
 
 O = [0; 0];
 A = [OA; 0];
 B = [Bx; By];
 
-% Step 1: Compute E from thetaB (relative to BO)
-angle_BO = atan2(By, Bx); % global angle from B to O
-thetaB_global = angle_BO + deg2rad(thetaB);
-E = B + BE * [cos(thetaB_global); sin(thetaB_global)];
+% --- F from thetaB (measured from the direction O->B, as before) -------
+thetaB_global = atan2(By, Bx) + deg2rad(thetaB);
+F = B + BF * [cos(thetaB_global); sin(thetaB_global)];
 
-% Step 2: Discretize M positions around circle
-N = 720; % Number of thetaO samples
-theta_samples = linspace(0, 2*pi, N);
-M_curve=E+EM*[cos(theta_samples);sin(theta_samples)];
-
-% Step 3: Compute Coupler Curve with M and verify if goes through zero
-coupler(1)=fourbar_coupler_curve(delta,OA,DM,CD,OC,DA,M_curve(1,1),M_curve(2,1));
-m=0;
-for i=2:N
-    coupler(i)=fourbar_coupler_curve(delta,OA,DM,CD,OC,DA,M_curve(1,i),M_curve(2,i));
-    if coupler(i)*coupler(i-1)<0
-        m=m+1;
-        sols_index(m)=i;
+% --- Dense sweep of the crank angle, plus the exact limit angles --------
+% The four-bar O-C-D-A assembles when |CD-DA| <= |AC| <= CD+DA, with
+% |AC|^2 = OA^2 + OC^2 - 2*OA*OC*cos(thetaO).
+N  = 7200;
+th = linspace(-pi, pi, N+1);
+th = th(1:end-1);
+if OA ~= 0 && OC ~= 0
+    for L = [CD + DA, abs(CD - DA)]
+        c = (OA^2 + OC^2 - L^2) / (2*OA*OC);
+        if abs(c) <= 1
+            th = [th, acos(c), -acos(c)]; %#ok<AGROW>
+        end
     end
 end
-if coupler(1)*coupler(N)<0
-    m=m+1;
-    sols_index(m)=N;
-end
+th = unique(mod(th + pi, 2*pi) - pi);
+th = [th, th(1) + 2*pi];          % close the loop
 
-% Step four: Refine solutions
-for i=1:m
-    sols_theta(i)=fzero(@(x) fourbar_coupler_curve_wrapper(x,delta,OA,DM,CD,OC,DA,E,EM),theta_samples(sols_index(i)));
-end
-
-sols=[];
-
-% p=0;
-% For all solutions found, compute sols
-for i=1:m
-
-    % Compute M for this solution
-    PositionM=E+EM*[cos(sols_theta(i));sin(sols_theta(i))];
-    M_int = PositionM;
-
-    % Output P: at distance MP from M, rotated eta from ME
-    v_ME = E - M_int;
-    if norm(v_ME) == 0, continue; end
-    v_ME_unit = v_ME / norm(v_ME);
-    R_eta = [cosd(eta), -sind(eta); sind(eta), cosd(eta)];
-    v_MP = R_eta * v_ME_unit;
-    P = M_int + MP * v_MP;
-
-    CM=sqrt(CD^2+DM^2-2*abs(CD)*abs(DM)*cosd(180-delta));
-    epsilon=acos((DM^2-CM^2-CD^2)/(-2*CM*CD));
-    x=PositionM(1);
-    y=PositionM(2);
-    a=OC;
-    e=CM;
-    L=2*a*x;
-    M=2*a*y;
-    N=e^2-x^2-y^2-a^2;
-
-    if abs(L)>1e-9
-        thetaO1=atan(M/L)+acos(-N/sqrt(L^2+M^2));
-        thetaO2=atan(M/L)-acos(-N/sqrt(L^2+M^2));
-    else
-        if abs(M)>1e-9
-            thetaO1=asin(-N/M);
-            thetaO2=asin(-N/M);
+% --- Roots on each D branch ----------------------------------------------
+% The sweep is vectorized (same formulas as config below); fzero then
+% refines each bracketed root with the scalar residual.
+Fres = sweep_residuals(th);          % 2 x numel(th), NaN where no assembly
+roots = zeros(0, 2);              % [thetaO (rad), branch]
+for b = 1:2
+    f = Fres(b,:);
+    for i = find(isfinite(f(1:end-1)) & isfinite(f(2:end)) & ...
+                 (f(1:end-1) == 0 | f(1:end-1).*f(2:end) < 0))
+        if f(i) == 0
+            roots(end+1,:) = [th(i) b]; %#ok<AGROW>
         else
-            thetaO1=NaN;
-            thetaO2=NaN;
+            t = fzero(@(x) residual(x, b), [th(i) th(i+1)]);
+            roots(end+1,:) = [t b]; %#ok<AGROW>
+        end
+    end
+end
+
+% --- Build the solutions ------------------------------------------------
+sols = [];
+R_eta = [cosd(eta), -sind(eta); sind(eta), cosd(eta)];
+tol   = 1e-6 * max([1, abs(geo(1:10))]);
+for k = 1:size(roots, 1)
+    [C, D, E, ok] = config(roots(k,1), roots(k,2));
+    if ~ok, continue; end
+    % keep only configurations in which every link closes
+    err = max(abs([norm(C-O)-abs(OC), norm(D-C)-abs(CD), norm(D-A)-abs(DA), ...
+                   norm(E-F)-abs(FE), norm(F-B)-abs(BF)]));
+    if err > tol, continue; end
+
+    v_EF = F - E;                          % as in the direct kinematics
+    P = E + EP * (R_eta * (v_EF / norm(v_EF)));
+
+    Angles.thetaC   = rel_angle(D - C, C - O);
+    Angles.thetaD   = rel_angle(A - D, D - C);
+    Angles.thetaF   = rel_angle(E - F, F - B);
+    Angles.thetaA   = rel_angle(B - A, A - O);
+    Angles.thetaB   = rel_angle(F - B, B - O);
+    Angles.thetaE   = rel_angle(P - E, E - F);
+    Angles.thetaO   = rel_angle(C - O, A - O);
+    Angles.theta_CE = vec_angle_xaxis(E - C);
+    Angles.theta_EP = vec_angle_xaxis(P - E);
+
+    sol.Positions.O = O;
+    sol.Positions.A = A;
+    sol.Positions.B = B;
+    sol.Positions.C = C;
+    sol.Positions.D = D;
+    sol.Positions.F = F;
+    sol.Positions.E = E;
+    sol.Positions.P = P;
+    sol.Angles   = Angles;
+    sol.theta_FE = vec_angle_xaxis(E - F);
+    sol.valid    = 1;
+    sol.thetaO   = rad2deg(atan2(C(2), C(1)));
+    sol.thetaB   = thetaB;
+
+    % skip duplicates (same assembly found twice, e.g. at a crank limit)
+    isDup = false;
+    for q = 1:numel(sols)
+        if norm(sols(q).Positions.C - C) < tol && norm(sols(q).Positions.D - D) < tol
+            isDup = true; break;
+        end
+    end
+    if ~isDup
+        sols = [sols; sol]; %#ok<AGROW>
+    end
+end
+
+if ~isempty(sols)
+    [~, order] = sort([sols.thetaO]);
+    sols = sols(order);
+else
+    nan2 = [NaN; NaN];
+    sol = struct();
+    sol.Positions.O = nan2;
+    sol.Positions.A = nan2;
+    sol.Positions.B = nan2;
+    sol.Positions.C = nan2;
+    sol.Positions.D = nan2;
+    sol.Positions.F = nan2;
+    sol.Positions.E = nan2;
+    sol.Positions.P = nan2;
+    flds = {'thetaC','thetaD','thetaF','thetaA','thetaB','thetaE','thetaO','theta_CE','theta_EP'};
+    for k = 1:numel(flds), sol.Angles.(flds{k}) = NaN; end
+    sol.theta_FE = NaN;
+    sol.valid    = 0;
+    sol.thetaO   = NaN;
+    sol.thetaB   = thetaB;
+    sols = sol;
+end
+
+    % --- nested helpers (share geometry and F) ---------------------------
+    function [C, D, E, ok] = config(t, b)
+        % C, D (branch b) and E, with the formulas of the direct kinematics
+        C = O + OC * [cos(t); sin(t)];
+        [D1, D2] = circle_intersections(C, CD, A, DA);
+        if b == 1, D = D1; else, D = D2; end
+        ok = all(isfinite(D));
+        if ~ok, E = [NaN; NaN]; return; end
+        v_CD_unit = (D - C) / norm(D - C);
+        R_delta = [cosd(delta) -sind(delta); sind(delta) cosd(delta)];
+        E = D + DE * (R_delta * (-v_CD_unit));
+    end
+
+    function r = residual(t, b)
+        [~, ~, E, ok] = config(t, b);
+        if ok
+            r = norm(E - F) - FE;
+        else
+            r = NaN;
         end
     end
 
-    % if N^2<(L^2+M^2)
-    %     if N==L
-    %         if c~=0
-    %             t=-N/M;
-    %             thetaO1=2*atan(t);
-    %             thetaO2=thetaO1;
-    %         else
-    %             thetaO1=pi;
-    %             thetaO2=-pi;
-    %         end
-    %     else
-    %         thetaO1=2*atan((-M+sqrt(L^2+M^2-N^2))/(N-L));
-    %         thetaO2=2*atan((-M-sqrt(L^2+M^2-N^2))/(N-L));
-    %     end
-    % else
-    %     thetaO1=NaN;
-    %     thetaO2=NaN;
-    % end
-
-
-
-    if not(isnan(thetaO1))&&(isreal(thetaO1))
-
-    C_int1=OC*[cos(thetaO1);sin(thetaO1)];
-    R_epsilon = [cos(-epsilon), -sin(-epsilon); sin(-epsilon), cos(-epsilon)];
-    D_int1=O+C_int1+CD*R_epsilon*(M_int-C_int1)./CM;
-    C_int2=OC*[cos(thetaO2);sin(thetaO2)];
-    D_int2=O+C_int2+CD*R_epsilon*(M_int-C_int2)./CM;
-
-    %if abs(norm(D_int1-A)-DA)<0.1
-    C_int=C_int1;    
-    D_int=D_int1;
-        
-        % Fill angles
-        Angles.thetaC   = rel_angle(D_int - C_int, C_int - O);
-        Angles.thetaD   = rel_angle(A - D_int, D_int - C_int);
-        Angles.thetaE   = rel_angle(M_int - E, E - B);
-        Angles.thetaA   = rel_angle(B - A, A - O);
-        Angles.thetaB   = rel_angle(E - B, B - O);
-        Angles.thetaM   = rel_angle(P - M_int, M_int - E);
-        Angles.thetaO   = rel_angle(C_int - O, A - O);
-        Angles.theta_CM = vec_angle_xaxis(M_int - C_int);
-        Angles.theta_MP = vec_angle_xaxis(P - M_int);
-
-        v_EM_plot = M_int - E;
-        theta_EM = vec_angle_xaxis(v_EM_plot);
-
-        thetaO_int=atan2(C_int(2),C_int(1));
-
-        % Fill structure
-        sol.Positions.O = O;
-        sol.Positions.A = A;
-        sol.Positions.B = B;
-        sol.Positions.C = C_int;
-        sol.Positions.D = D_int;
-        sol.Positions.E = E;
-        sol.Positions.M = M_int;
-        sol.Positions.P = P;
-        sol.Angles = Angles;
-        sol.theta_EM = theta_EM;
-        sol.valid = 1;
-        sol.thetaO = rad2deg(thetaO_int);
-        sol.thetaB = thetaB;
-        sols = [sols; sol];
-    %end
-
-    %if abs(norm(D_int2-A)-DA)<0.1
-        C_int=C_int2;
-    D_int=D_int2;
-        % Fill angles
-        Angles.thetaC   = rel_angle(D_int - C_int, C_int - O);
-        Angles.thetaD   = rel_angle(A - D_int, D_int - C_int);
-        Angles.thetaE   = rel_angle(M_int - E, E - B);
-        Angles.thetaA   = rel_angle(B - A, A - O);
-        Angles.thetaB   = rel_angle(E - B, B - O);
-        Angles.thetaM   = rel_angle(P - M_int, M_int - E);
-        Angles.thetaO   = rel_angle(C_int - O, A - O);
-        Angles.theta_CM = vec_angle_xaxis(M_int - C_int);
-        Angles.theta_MP = vec_angle_xaxis(P - M_int);
-
-        v_EM_plot = M_int - E;
-        theta_EM = vec_angle_xaxis(v_EM_plot);
-
-        thetaO_int=atan2(C_int(2),C_int(1));
-
-        % Fill structure
-        sol.Positions.O = O;
-        sol.Positions.A = A;
-        sol.Positions.B = B;
-        sol.Positions.C = C_int;
-        sol.Positions.D = D_int;
-        sol.Positions.E = E;
-        sol.Positions.M = M_int;
-        sol.Positions.P = P;
-        sol.Angles = Angles;
-        sol.theta_EM = theta_EM;
-        sol.valid = 1;
-        sol.thetaO = rad2deg(thetaO_int);
-        sol.thetaB = thetaB;
-        sols = [sols; sol];
+    function Fres = sweep_residuals(t)
+        % Vectorized version of residual for all angles t and both
+        % branches (same formulas and branch ordering as config)
+        t  = t(:).';
+        Cv = OC * [cos(t); sin(t)];
+        dv = A - Cv;                               % C -> A
+        d  = sqrt(sum(dv.^2, 1));
+        tolc = 1e-9 * max([1, abs(CD), abs(DA)]);
+        okv = d > 0 & d <= CD + DA + tolc & d >= abs(CD - DA) - tolc;
+        a  = (CD^2 - DA^2 + d.^2) ./ (2*d);
+        h  = sqrt(max(0, CD^2 - a.^2));
+        u  = dv ./ d;                              % unit C -> A
+        p0 = Cv + u .* a;
+        off = [-u(2,:); u(1,:)] .* h;              % [0 -1; 1 0] * u * h
+        R_delta = [cosd(delta) -sind(delta); sind(delta) cosd(delta)];
+        Fres = nan(2, numel(t));
+        for bb = 1:2
+            Dv = p0 + (3 - 2*bb) * off;            % bb=1: +offset
+            ucd = (Dv - Cv) ./ sqrt(sum((Dv - Cv).^2, 1));
+            Ev  = Dv + DE * (R_delta * (-ucd));
+            r   = sqrt(sum((Ev - F).^2, 1)) - FE;
+            r(~okv) = NaN;
+            Fres(bb,:) = r;
+        end
     end
 
-
-
-    %thetaA11=-atan2(OC*sin(thetaO1),OA-OC*cos(thetaO1))+acos((CD^2-OC^2-DA^2-OA^2+2*OC*OA*cos(thetaO1))/(2*DA*sqrt(OC^2+OA^2-2*OC*OA*cos(thetaO1))));
-    %thetaA12=-atan2(OC*sin(thetaO1),OA-OC*cos(thetaO1))-acos((CD^2-OC^2-DA^2-OA^2+2*OC*OA*cos(thetaO1))/(2*DA*sqrt(OC^2+OA^2-2*OC*OA*cos(thetaO1))));
-    %thetaA21=-atan2(OC*sin(thetaO2),OA-OC*cos(thetaO2))+acos((CD^2-OC^2-DA^2-OA^2+2*OC*OA*cos(thetaO2))/(2*DA*sqrt(OC^2+OA^2-2*OC*OA*cos(thetaO2))));
-    %thetaA22=-atan2(OC*sin(thetaO2),OA-OC*cos(thetaO2))-acos((CD^2-OC^2-DA^2-OA^2+2*OC*OA*cos(thetaO2))/(2*DA*sqrt(OC^2+OA^2-2*OC*OA*cos(thetaO2))));
-
-
-%     % Compute potential positions for C and D
-%     CM=sqrt(CD^2+DM^2-2*abs(CD)*abs(DM)*cosd(180-delta));
-%     [C1,C2]=circle_intersections(M_int, abs(CM), O, abs(OC));
-%     [D1,D2]=circle_intersections(M_int, abs(DM), A, abs(DA));
-% 
-%     % Error with potential length/orientation for CD and real one
-%     L(1)=abs(norm(C1-D1)-abs(CD));S(1)=sign(cross([D1-C1;0],[M_int-C1;0])'*[0;0;1]);
-%     L(2)=abs(norm(C1-D2)-abs(CD));S(2)=sign(cross([D2-C1;0],[M_int-C1;0])'*[0;0;1]);
-%     L(3)=abs(norm(C2-D1)-abs(CD));S(3)=sign(cross([D1-C2;0],[M_int-C2;0])'*[0;0;1]);
-%     L(4)=abs(norm(C2-D2)-abs(CD));S(4)=sign(cross([D2-C2;0],[M_int-C2;0])'*[0;0;1]);
-%     tol=1e-6;
-% 
-%     L,S
-% 
-%     for j=1:4
-% 
-%         if (L(j)<tol)&&(S(j)>0)
-% 
-%             switch j
-%                 case 1
-%                     C_int=C1;D_int=D1;
-%                 case 2
-%                     C_int=C1;D_int=D2;
-%                 case 3
-%                     C_int=C2;D_int=D1;
-%                 case 4
-%                     C_int=C2;D_int=D2;
-%             end
-% 
-%             % Fill angles
-%             Angles.thetaC   = rel_angle(D_int - C_int, C_int - O);
-%             Angles.thetaD   = rel_angle(A - D_int, D_int - C_int);
-%             Angles.thetaE   = rel_angle(M_int - E, E - B);
-%             Angles.thetaA   = rel_angle(B - A, A - O);
-%             Angles.thetaB   = rel_angle(E - B, B - O);
-%             Angles.thetaM   = rel_angle(P - M_int, M_int - E);
-%             Angles.thetaO   = rel_angle(C_int - O, A - O);
-%             Angles.theta_CM = vec_angle_xaxis(M_int - C_int);
-%             Angles.theta_MP = vec_angle_xaxis(P - M_int);
-% 
-%             v_EM_plot = M_int - E;
-%             theta_EM = vec_angle_xaxis(v_EM_plot);
-% 
-%             thetaO_int=atan2(C_int(2),C_int(1));
-% 
-%             % Fill structure
-%             sol.Positions.O = O;
-%             sol.Positions.A = A;
-%             sol.Positions.B = B;
-%             sol.Positions.C = C_int;
-%             sol.Positions.D = D_int;
-%             sol.Positions.E = E;
-%             sol.Positions.M = M_int;
-%             sol.Positions.P = P;
-%             sol.Angles = Angles;
-%             sol.theta_EM = theta_EM;
-%             sol.valid = 1;
-%             sol.thetaO = rad2deg(thetaO_int);
-%             sols = [sols; sol];
-% 
-%             p=p+1;
-%         end
-% 
-%     end
-% 
-end
-
-if isempty(sols)
-    nan2 = [NaN; NaN];
-            sol.Positions.O = nan2;
-            sol.Positions.A = nan2;
-            sol.Positions.B = nan2;
-            sol.Positions.C = nan2;
-            sol.Positions.D = nan2;
-            sol.Positions.E = nan2;
-            sol.Positions.M = nan2;
-            sol.Positions.P = nan2;
-            flds = {'thetaC','thetaD','thetaE','thetaA','thetaB','thetaM','thetaO','theta_CM','theta_MP'};
-            for k = 1:numel(flds), sol.Angles.(flds{k}) = NaN; end
-            sol.theta_EM = NaN;
-            sol.valid = 0;
-            sol.thetaO = NaN;
-            sol.thetaB = thetaB;
-            sols = sol;
-end
-
-%if p~=m
-    % On a rate une solution ! Le probleme est dans le calcul des points
-    % C1..D2 :
-    % [C1,C2]=circle_intersections(M_int, abs(CM), O, abs(OC));
-    % [D1,D2]=circle_intersections(M_int, abs(DM), A, abs(DA));
-    % qui ne trouve pas une solution
-    % par exemple : stephensonIII_inverse_kinematics(geo,143)
-    % vs stephensonIII_inverse_kinematics(geo,142)
-%end
-
-end
-
-
-%% ---- COUPLER CURVE
-function f = fourbar_coupler_curve(delta,OA,DM,CD,OC,DA,x,y);
-
-CM=sqrt(CD^2+DM^2-2*abs(CD)*abs(DM)*cosd(180-delta));
-epsilon=acos((DM^2-CM^2-CD^2)/(-2*abs(CD*CM)));
-d=abs(OA);
-e=abs(CM);
-b=abs(CD);
-a=abs(OC);
-c=abs(DA);
-
-aa = sqrt(e^2+b^2-2*e*b*cos(epsilon));
-gamma = asin(b*sin(epsilon)/aa);
-beta = asin(e*sin(epsilon)/aa);
-f = (sin(epsilon).*((x-d).*sin(gamma)-y.*cos(gamma)).*(x.*x+y.*y+e.*e-a.*a)+...
-    y.*sin(beta).*((x-d).^2+y.*y+aa.*aa-c.*c)).^2+...
-    (sin(epsilon).*((x-d).*cos(gamma)+y.*sin(gamma)).*(x.*x+y.*y+e.*e-a.*a)-...
-    x.*sin(beta).*((x-d).*(x-d)+y.*y+aa.*aa-c.*c)).^2-...
-    4*e.^2.*sin(epsilon).^2.*sin(gamma).^2.*(x.*(x-d)+y.*y-d.*y.*cot(gamma)).^2;
-end
-
-%% ---- COUPLER CURVE
-function f = fourbar_coupler_curve_wrapper(theta,delta,OA,DM,CD,OC,DA,E,EM);
-p=E+EM*[cos(theta);sin(theta)];
-x=p(1);
-y=p(2);
-
-f = fourbar_coupler_curve(delta,OA,DM,CD,OC,DA,x,y);
 end
 
 
 %% ---- HELPERS ----
 
 function [p1, p2] = circle_intersections(c1, r1, c2, r2)
+% Same as in stephensonIII_direct_kinematics (same branch ordering), with
+% a tiny tolerance so that the exact crank-limit angles (tangent circles)
+% still give a point despite rounding
 d = norm(c2-c1);
-if d > r1+r2 || d - abs(r1-r2) < 0
+tolc = 1e-9 * max([1, abs(r1), abs(r2)]);
+if d > r1+r2+tolc || d < abs(r1-r2)-tolc
     p1 = [NaN; NaN]; p2 = [NaN; NaN]; return
 end
 a = (r1^2 - r2^2 + d^2) / (2*d);
@@ -410,14 +248,6 @@ end
 offset = h * [0 -1; 1 0] * (c2-c1)/d;
 p1 = p0 + offset;
 p2 = p0 - offset;
-end
-
-function [D1, D2] = possible_D_from_M(M, DM)
-% Returns the two points at distance DM from M (unit circle)
-D1 = M + DM*[cos(0); sin(0)]; % arbitrary direction, but needs proper calculation
-D2 = M + DM*[cos(pi); sin(pi)];
-% Actually, for general case, you might have an extra constraint—delta, or relative to C, etc.
-% If you know direction to E or C, or use the vector from M to E/C and rotate by delta...
 end
 
 function theta = rel_angle(v2, v1)

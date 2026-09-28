@@ -20,10 +20,7 @@ function fourbar_spherical_gui()
 % BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Last Update: 2025/05/30
-% Contact: lionel.birglen@polymtl.ca
 %
-% Code provided under GNU Affero General Public License v3.0
 
 
 % ---------------------------------------------------------------------

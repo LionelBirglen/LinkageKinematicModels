@@ -15,8 +15,6 @@ function rrr_gui()
 % BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Contact: lionel.birglen@polymtl.ca
-% Code provided under GNU Affero General Public License v3.0
 
 % ----------------------------------------------------------------
 % 0) Environment detection
@@ -24,7 +22,7 @@ function rrr_gui()
 isOctave = exist('OCTAVE_VERSION','builtin') ~= 0;
 
 % ----------------------------------------------------------------
-% 1) Create figure  (all layout in pixels for consistency)
+% 1) Figure
 % ----------------------------------------------------------------
 FW = 900; FH = 600;   % figure width / height
 if isOctave
@@ -72,22 +70,16 @@ if isempty(existingMenus)
 end
 
 % ----------------------------------------------------------------
-% 3) Default values
+% 3) Defaults
 % ----------------------------------------------------------------
 def_L   = [57  46  51];
 def_t   = [39  37  40];       % direct mode joint angles (deg)
 def_inv = [35  125  116];     % Px, Py, phi (deg)
-def_cfg = 1;                  % +1 elbow-up
+def_elbow = 1;                % 1=elbow-up, 2=elbow-down
 
 % ----------------------------------------------------------------
-% 4) Controls  (normalized units for panels; pixels for bottom standalone items)
+% 4) Geometry panel  (two columns: a,b,c,d | e,alpha,h,eta)
 % ----------------------------------------------------------------
-
-%------------------------------------------------------
-% Geometry panel
-% Tight edit boxes matching fourbar_gui style (hX=0.03, figure-normalized)
-%------------------------------------------------------
-% Geometry: one row with L1, L2, L3 side by side
 geoPanel = uipanel('Title','Geometry','FontSize',10, ...
     'Units','normalized','Position',[0.02 0.90 0.32 0.09]);
 names  = {'L1','L2','L3'};
@@ -104,9 +96,9 @@ for k = 1:3
         'String',num2str(def_L(k)),'Callback',@updatePlot);
 end
 
-%------------------------------------------------------
-% Mode selection
-%------------------------------------------------------
+% ----------------------------------------------------------------
+% 5) Mode Selection (Direct / Inverse)
+% ----------------------------------------------------------------
 modePanel = uipanel('Title','Mode','FontSize',10,'Units','normalized', ...
     'Position',[0.02 0.82 0.32 0.07]);
 rad1 = uicontrol('Style','radiobutton','String','Direct', ...
@@ -116,9 +108,7 @@ rad2 = uicontrol('Style','radiobutton','String','Inverse', ...
     'Units','normalized','Position',[0.20 0.83 0.08 0.035], ...
     'Value',0,'Callback',@cbRad2);
 
-%------------------------------------------------------
-% Elbow toggle + show-both
-%------------------------------------------------------
+% TO DO: Replace this with solution checkboxes
 elbow_btn = uicontrol('Style','pushbutton','String','Elbow: Up', ...
     'Units','normalized','Position',[0.02 0.760 0.16 0.05], ...
     'Callback',@cbElbow);
@@ -126,10 +116,9 @@ show_both_cb = uicontrol('Style','checkbox','String','Show both', ...
     'Units','normalized','Position',[0.20 0.760 0.14 0.05], ...
     'Value',0,'Callback',@updatePlot);
 
-%------------------------------------------------------
-% Direct mode panel (3 rows, same slider proportions as fourbar_gui)
-% Panel height 0.08 each row -> 3 rows in 0.25 total
-%------------------------------------------------------
+% ----------------------------------------------------------------
+% 6) Direct mode sliders (theta1, theta2, theta3)
+% ----------------------------------------------------------------
 directPanel = uipanel('Title','Direct Mode Sliders','FontSize',10, ...
     'Position',[0.02 0.58 0.32 0.17], ...
     'Visible','on');
@@ -160,9 +149,9 @@ if isOctave
     end
 end
 
-%------------------------------------------------------
-% Inverse mode panel (3 rows, same style)
-%------------------------------------------------------
+% ----------------------------------------------------------------
+% 7) Inverse mode sliders (x, y, phi)
+% ----------------------------------------------------------------
 inversePanel = uipanel('Title','Inverse Mode Sliders','FontSize',10, ...
     'Position',[0.02 0.40 0.32 0.17], ...
     'Visible','on');
@@ -188,36 +177,40 @@ end
 set(invLab(1),'String','X');
 set(invLab(2),'String','Y');
 set(invLab(3),'String','phi');
+% Start in Direct mode: disable all inverse controls
+for k = 1:3
+    set(invSl(k), 'Enable','off');
+    set(invTxt(k),'Enable','off');
+end
 if isOctave
+    set(directPanel,'BackgroundColor',[1 1 1]);
+    set(inversePanel,'BackgroundColor',[1 1 1]);
+    set(geoPanel,'BackgroundColor',[1 1 1]);
+    set(modePanel,'BackgroundColor',[1 1 1]);
     for k = 1:3
         set(invTxt(k),'FontSize',10-1*isOctave);
         set(invTxt(k),'Position',[0.76 invPanelBot(k) 0.22 0.28]);
     end
 end
 
-% Set panel backgrounds white in Octave
-if isOctave
-    set(directPanel,'BackgroundColor',[1 1 1]);
-    set(inversePanel,'BackgroundColor',[1 1 1]);
-    set(geoPanel,'BackgroundColor',[1 1 1]);
-    set(modePanel,'BackgroundColor',[1 1 1]);
-end
+% ----------------------------------------------------------------
+% 8) Display solutions panel (4 checkboxes)
+% ----------------------------------------------------------------
+% TO DO: ...
 
-% Start in Direct mode: disable all inverse controls
-for k = 1:3
-    set(invSl(k), 'Enable','off');
-    set(invTxt(k),'Enable','off');
-end
 
-%------------------------------------------------------
-% Animate button, info text, axes  (pixel units)
-%------------------------------------------------------
+% ----------------------------------------------------------------
+% 9) Animate button and info text
+% ----------------------------------------------------------------
 animate_btn = uicontrol('Style','pushbutton','String','Animate', ...
     'Position',[20 210 285 26],'Callback',@toggleAnimation);
 
 info_text = uicontrol('Style','text','Position',[20 140 285 68], ...
     'FontSize',10-1*isOctave,'HorizontalAlignment','left');
 
+% ----------------------------------------------------------------
+% 10) Axes
+% ----------------------------------------------------------------
 ax = axes('Units','pixels','Position',[310 50 560 500]);
 axis equal;
 grid on;
@@ -229,15 +222,22 @@ else
     title(ax,'Planar RRR Linkage');
 end
 hold(ax,'on');
+%TO DO: compute and adjust limits here
 
 % ----------------------------------------------------------------
-% 5) Store state
+% 11) Store state
 % ----------------------------------------------------------------
+data.name          = 'RRR Linkage';
+data.type          = 1.01;
+data.info          = 'Lorem ipsum';
+data.author        = 'Lionel Birglen';
+data.date          = '20260628';
+data.version       = 0.1;
 data.geoEd        = geoEd;
 data.rad1         = rad1;
 data.rad2         = rad2;
 data.modeStr      = 'Direct';
-data.configState  = def_cfg;
+data.elbowIdx     = def_elbow;  % 1=elbow-up, 2=elbow-down %TO DO: delete
 data.elbow_btn    = elbow_btn;
 data.show_both    = show_both_cb;
 data.dirSl        = dirSl;
@@ -253,13 +253,14 @@ data.time_offset  = 0;
 data.th_offset    = def_t;
 data.inv_offset   = def_inv;
 data.limits       = [-200 200 -200 200];
+data.userZoomed   = false;  % true after user pans/zooms
+data.firstPlot    = true;   % skip zoom detection on first draw
 guidata(hFig, data);
 
-% Initial draw
 updatePlot([],[]);
 
 % ================================================================
-%  Nested callbacks
+%  Callbacks
 % ================================================================
 
     function cbRad1(~,~)
@@ -277,9 +278,11 @@ updatePlot([],[]);
         Px  = get(data.invSl(1),'Value');
         Py  = get(data.invSl(2),'Value');
         phi = deg2rad(get(data.invSl(3),'Value'));
-        sol = rrr_inverse_kinematics(geo,Px,Py,phi,data.configState);
+        sols = rrr_inverse_kinematics(geo,[Px Py phi]);
+        sol  = sols(data.elbowIdx);
         if sol.valid
-            vals = rad2deg([sol.theta1 sol.theta2 sol.theta3]);
+            th = sol.theta;
+            vals = rad2deg(th).';
             for k = 1:3
                 set(data.dirSl(k),'Value',vals(k));
                 set(data.dirTxt(k),'String',sprintf('%.1f',vals(k)));
@@ -304,7 +307,7 @@ updatePlot([],[]);
         t1 = deg2rad(get(data.dirSl(1),'Value'));
         t2 = deg2rad(get(data.dirSl(2),'Value'));
         t3 = deg2rad(get(data.dirSl(3),'Value'));
-        sol = rrr_direct_kinematics(geo,t1,t2,t3);
+        sol = rrr_direct_kinematics(geo,[t1 t2 t3]);
         P  = sol.Positions.P;
         phi_deg = mod(rad2deg(sol.phi) + 180, 360) - 180;  % wrap to [-180,180]
         vals = [P(1) P(2) phi_deg];
@@ -319,8 +322,8 @@ updatePlot([],[]);
 
     function cbElbow(~,~)
         data = guidata(hFig);
-        data.configState = -data.configState;
-        if data.configState == 1
+        data.elbowIdx = 3 - data.elbowIdx;  % toggle 1↔2
+        if data.elbowIdx == 1
             set(data.elbow_btn,'String','Elbow: Up');
         else
             set(data.elbow_btn,'String','Elbow: Down');
@@ -356,21 +359,39 @@ updatePlot([],[]);
             R   = (L1+L2+L3) * 1.1;
             lim = [-R R -R R];
             data.limits = lim;
+            % Save current axes limits BEFORE clearing (user may have zoomed/panned)
+            prevXLim = xlim(data.ax);
+            prevYLim = ylim(data.ax);
+            tol = (data.limits(2)-data.limits(1)) * 1e-3;
+            if ~isfield(data,'userZoomed'), data.userZoomed = false; end
+            if ~isfield(data,'firstPlot'),  data.firstPlot  = true;  end
+            if data.firstPlot
+                userZoomed = false;
+                data.firstPlot = false;
+                guidata(hFig,data);
+            else
+                userZoomed = data.userZoomed || ...
+                    abs(prevXLim(1)-data.limits(1))>tol || abs(prevXLim(2)-data.limits(2))>tol || ...
+                    abs(prevYLim(1)-data.limits(3))>tol || abs(prevYLim(2)-data.limits(4))>tol;
+            end
             opts.ax         = data.ax;
             opts.clearAxes  = true;
             opts.showLabels = true;
-            opts.limits     = lim;
+            opts.limits     = [];  % limits applied after plot, not inside
 
             if strcmp(data.modeStr,'Direct')
                 t1 = deg2rad(get(data.dirSl(1),'Value'));
                 t2 = deg2rad(get(data.dirSl(2),'Value'));
                 t3 = deg2rad(get(data.dirSl(3),'Value'));
+                t1=atan2(sin(t1),cos(t1)); t2=atan2(sin(t2),cos(t2)); t3=atan2(sin(t3),cos(t3));
+                t_deg=rad2deg([t1 t2 t3]);
+                for kk=1:3, set(data.dirSl(kk),'Value',max(-180,min(180,t_deg(kk)))); end
                 for k = 1:3
                     vd = rad2deg([t1 t2 t3]);
                     set(data.dirTxt(k),'String',sprintf('%.1f',vd(k)));
                 end
                 rrr_plot(geo,'direct',[t1 t2 t3],opts);
-                sol = rrr_direct_kinematics(geo,t1,t2,t3);
+                sol = rrr_direct_kinematics(geo,[t1 t2 t3]);
                 P  = sol.Positions.P;
                 phi_disp = mod(rad2deg(sol.phi) + 180, 360) - 180;
                 info = sprintf('Direct mode:\nP=[%.2f; %.2f]  phi=%.2f deg', ...
@@ -383,28 +404,38 @@ updatePlot([],[]);
                 set(data.invTxt(2),'String',sprintf('%.1f',Py));
                 set(data.invTxt(3),'String',sprintf('%.1f',rad2deg(phi)));
                 opts.showBoth = get(data.show_both,'Value');
-                rrr_plot(geo,'inverse',[Px Py phi data.configState],opts);
-                sol = rrr_inverse_kinematics(geo,Px,Py,phi,data.configState);
+                elbSign = 1; if data.elbowIdx==2, elbSign=-1; end
+                opts.elbow = elbSign;
+                rrr_plot(geo,'inverse',[Px Py phi],opts);
+                sols = rrr_inverse_kinematics(geo,[Px Py phi]);
+                sol  = sols(data.elbowIdx);
                 if sol.valid
+                    th = rad2deg(sol.theta);
                     info = sprintf('Inverse mode:\nSol 1: th1=%.1f  th2=%.1f  th3=%.1f deg', ...
-                        rad2deg(sol.theta1),rad2deg(sol.theta2),rad2deg(sol.theta3));
+                        th(1),th(2),th(3));
                 else
                     info = 'Inverse mode: unreachable';
                 end
                 if get(data.show_both,'Value')
-                    sol2 = rrr_inverse_kinematics(geo,Px,Py,phi,-data.configState);
+                    sol2 = sols(3 - data.elbowIdx);
                     if sol2.valid
+                        th2 = rad2deg(sol2.theta);
                         info = sprintf('%s\nSol 2: th1=%.1f  th2=%.1f  th3=%.1f deg', ...
-                            info,rad2deg(sol2.theta1),rad2deg(sol2.theta2),rad2deg(sol2.theta3));
+                            info,th2(1),th2(2),th2(3));
                     else
                         info = sprintf('%s\nSol 2: unreachable',info);
                     end
                 end
             end
 
-            axis(data.ax,'equal');
-            xlim(data.ax, lim(1:2));
-            ylim(data.ax, lim(3:4));
+            if userZoomed
+                xlim(data.ax, prevXLim);
+                ylim(data.ax, prevYLim);
+            else
+                axis(data.ax,'equal');
+                xlim(data.ax, lim(1:2));
+                ylim(data.ax, lim(3:4));
+            end
             set(data.info_text,'String',info);
             guidata(hFig,data);
             drawnow();
@@ -494,7 +525,7 @@ updatePlot([],[]);
         updatePlot([],[]);
     end
 
-    % ---- File menu callbacks --------------------------------------
+    % ---- File callbacks ----------------------------------------------
     function cbOpen(hFig)
         warning('off','all');
         [f,p] = uigetfile({'*.mat','MAT-file (*.mat)'},'Open Session File');
@@ -522,8 +553,12 @@ updatePlot([],[]);
             set(data.invTxt(k),'String',sprintf('%.1f',inv_vals(k)));
         end
         data.modeStr     = sess.modeStr;
-        data.configState = sess.configState;
-        if data.configState == 1
+        data.elbowIdx = 1;
+        if isfield(sess,'elbowIdx'), data.elbowIdx = sess.elbowIdx;
+        elseif isfield(sess,'configState')
+            if sess.configState == -1, data.elbowIdx = 2; end
+        end
+        if data.elbowIdx == 1
             set(data.elbow_btn,'String','Elbow: Up');
         else
             set(data.elbow_btn,'String','Elbow: Down');
@@ -557,7 +592,7 @@ updatePlot([],[]);
         session.Py          = get(data.invSl(2),'Value');
         session.phi         = get(data.invSl(3),'Value');
         session.modeStr     = data.modeStr;
-        session.configState = data.configState;
+        session.elbowIdx    = data.elbowIdx;
         session.showBoth    = get(data.show_both,'Value');
         save(target,'session','-mat','-v6');
     end
@@ -628,11 +663,13 @@ updatePlot([],[]);
 
     function cbResetView(hFig)
         data = guidata(hFig);
+        data.userZoomed = false;
+        guidata(hFig,data);
         if isfield(data,'limits') && numel(data.limits)==4
+            axis(data.ax,'equal');
             xlim(data.ax,data.limits(1:2));
             ylim(data.ax,data.limits(3:4));
         end
-        axis(data.ax,'equal');
     end
 
     function cbPreferences(hFig)
@@ -644,4 +681,8 @@ updatePlot([],[]);
         end
     end
 
+end
+
+function out = sc_ternary(cond, a, b)
+if cond, out=a; else out=b; end
 end

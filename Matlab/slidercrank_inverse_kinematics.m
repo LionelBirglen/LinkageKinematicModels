@@ -15,6 +15,7 @@ function sol = slidercrank_inverse_kinematics(geo, x_slider, config)
 %     .Positions.A   - [x;y] crank-coupler revolute (end of crank)
 %     .Positions.B   - [x;y] coupler-slider pin (on rail)
 %     .Positions.P   - [x;y] end of extension link B->P
+%     .Positions.Q   - [x;y] point on coupler AB (distance h_q from A, angle eta_q from AB)
 %     .phi           - crank angle (rad)
 %     .x_slider      - slider displacement (same as input)
 %     .slider_dir    - [cos;sin] unit vector along slider axis
@@ -29,10 +30,8 @@ function sol = slidercrank_inverse_kinematics(geo, x_slider, config)
 % BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Contact: lionel.birglen@polymtl.ca
-% Code provided under GNU Affero General Public License v3.0
 
-[a, b, c, slider_angle] = sc_parse_geo(geo);
+[a, b, c, slider_angle, h_q, eta_q] = sc_parse_geo(geo);
 
 O          = [0; 0];
 slider_dir = [cos(slider_angle); sin(slider_angle)];
@@ -42,6 +41,7 @@ sol.Positions.O  = O;
 sol.Positions.A  = [NaN; NaN];
 sol.Positions.B  = B;
 sol.Positions.P  = B + c * slider_dir;
+sol.Positions.Q  = [NaN; NaN];
 sol.phi          = NaN;
 sol.x_slider     = x_slider;
 sol.slider_dir   = slider_dir;
@@ -54,22 +54,28 @@ A   = sc_ternary(config == 1, A1, A2);
 phi = atan2(A(2) - O(2), A(1) - O(1));
 phi = atan2(sin(phi), cos(phi));
 
+phi_AB = atan2(B(2)-A(2), B(1)-A(1));
+Q = A + h_q * [cos(phi_AB + eta_q); sin(phi_AB + eta_q)];
 sol.Positions.A = A;
 sol.Positions.B = B;
 sol.Positions.P = B + c * slider_dir;
+sol.Positions.Q = Q;
 sol.phi         = phi;
 sol.valid       = true;
 end
 
-function [a, b, c, slider_angle] = sc_parse_geo(geo)
+function [a, b, c, slider_angle, h_q, eta_q] = sc_parse_geo(geo)
 if isnumeric(geo)
     if numel(geo) < 4
         error('slidercrank_inverse_kinematics:BadGeo','geo vector must have 4 elements [a b c slider_angle].');
     end
     g = geo(:).';
     a = g(1); b = g(2); c = g(3); slider_angle = g(4);
+    h_q = 0; eta_q = 0;
 elseif isstruct(geo)
     a = geo.a; b = geo.b; c = geo.c; slider_angle = geo.slider_angle;
+    h_q   = 0; if isfield(geo,'h_q'),   h_q   = geo.h_q;   end
+    eta_q = 0; if isfield(geo,'eta_q'), eta_q = geo.eta_q; end
 else
     error('slidercrank_inverse_kinematics:BadGeo','geo must be a numeric vector [a b c slider_angle] or a struct.');
 end

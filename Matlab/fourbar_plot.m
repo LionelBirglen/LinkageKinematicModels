@@ -4,9 +4,13 @@ function [ax, sol] = fourbar_plot(geo, mode, inputs, opts)
 %   [AX,SOL] = FOURBAR_PLOT(geo, MODE, INPUTS)
 %   [AX,SOL] = FOURBAR_PLOT(geo, MODE, INPUTS, OPTS)
 %
-%   GEO   : 1x8 numeric vector  [a, b, c, d, e, epsilon, delta] (all in consistent length units, epsilon, delta in rad)
+%   GEO   : 1x7 numeric vector  [a, b, c, d, e, epsilon, delta] (all in consistent length units, epsilon, delta in rad)
 %           OR struct with fields:
 %              .a, .b, .c, .d, .e, .epsilon, .delta,
+%           Optionally also: .h_q, .eta_q (point Q on link B-C)
+%                            .h_r, .eta_r (point R on link O-A)
+%           If any of these optional fields are absent or incomplete,
+%           the corresponding point and ternary body are simply not drawn.
 %
 %   MODE  : 'direct'  -> INPUT = theta
 %           'inverse' -> INPUT = alpha
@@ -67,6 +71,21 @@ end
 % --- 1) geoetry --------------------------------------------------
 g = local_parse_geo(geo);
 
+% Build a struct to pass to the kinematics functions, preserving any
+% optional Q/R fields from the original geo input (if present), so
+% that fourbar_direct_kinematics / fourbar_inverse_kinematics can
+% compute the optional points Q and R. Backward compatible: if geo
+% was a plain 7-element vector, geo_kin has no Q/R fields and the
+% kinematics functions simply leave Positions.Q/.R as NaN.
+geo_kin = struct('a',g(1),'b',g(2),'c',g(3),'d',g(4), ...
+                 'e',g(5),'epsilon',g(6),'delta',g(7));
+if isstruct(geo)
+    if isfield(geo,'h_q'),   geo_kin.h_q   = geo.h_q;   end
+    if isfield(geo,'eta_q'), geo_kin.eta_q = geo.eta_q; end
+    if isfield(geo,'h_r'),   geo_kin.h_r   = geo.h_r;   end
+    if isfield(geo,'eta_r'), geo_kin.eta_r = geo.eta_r; end
+end
+
 % Ground symbol length: fixed fraction of the longest link, never changes with pose
 gs_len = max(g(1:4)) * 0.1125;
 
@@ -113,7 +132,7 @@ switch mode
                 'fourbar_direct_kinematics.m is not on the path.');
         end
         th  = inputs;
-        sol = fourbar_direct_kinematics(g, th);
+        sol = fourbar_direct_kinematics(geo_kin, th);
 
     case {'inverse','i'}
         if ~exist('fourbar_inverse_kinematics','file')
@@ -121,7 +140,7 @@ switch mode
                 'fourbar_inverse_kinematics.m is not on the path.');
         end
         alph = inputs;
-        sol  = fourbar_inverse_kinematics(g, alph);
+        sol  = fourbar_inverse_kinematics(geo_kin, alph);
 
     otherwise
         error('fourbar_plot:BadMode', ...
@@ -194,6 +213,34 @@ for k = 1:numel(idxToPlot)
         'EdgeColor', col, ...
         'FaceAlpha', 0.5, ...
         'Parent', ax);
+
+    % --- optional point Q on link B-C and ternary body B-C-Q -------
+    hasQ = isfield(s,'Positions') && isfield(s.Positions,'Q') && ...
+        all(isfinite(s.Positions.Q));
+    if hasQ
+        Q = s.Positions.Q;
+        patch('XData', [B(1) C(1) Q(1)], ...
+            'YData', [B(2) C(2) Q(2)], ...
+            'FaceColor', col, ...
+            'EdgeColor', col, ...
+            'FaceAlpha', 0.5, ...
+            'Parent', ax);
+        plot(ax, Q(1), Q(2), 'kx', 'MarkerSize', ms_P, 'LineWidth', lw_link);
+    end
+
+    % --- optional point R on link O-A and ternary body O-A-R -------
+    hasR = isfield(s,'Positions') && isfield(s.Positions,'R') && ...
+        all(isfinite(s.Positions.R));
+    if hasR
+        R_pt = s.Positions.R;
+        patch('XData', [O(1) A(1) R_pt(1)], ...
+            'YData', [O(2) A(2) R_pt(2)], ...
+            'FaceColor', col, ...
+            'EdgeColor', col, ...
+            'FaceAlpha', 0.5, ...
+            'Parent', ax);
+        plot(ax, R_pt(1), R_pt(2), 'kx', 'MarkerSize', ms_P, 'LineWidth', lw_link);
+    end
 
     % --- joints as filled white circles ----------------------------
     scatter(ax, [O(1) A(1) B(1) C(1)], ...
@@ -275,6 +322,22 @@ text(ax, P(1)+dx, P(2)+dy, 'P', ...
     'FontSize',fs_label, 'Color','k', ...
     'HorizontalAlignment','left', ...
     'VerticalAlignment','bottom');
+
+% Optional Q and R labels (only if those points exist and are finite)
+if isfield(s,'Positions') && isfield(s.Positions,'Q') && all(isfinite(s.Positions.Q))
+    Q = s.Positions.Q;
+    text(ax, Q(1)+dx, Q(2)+dy, 'Q', ...
+        'FontSize',fs_label, 'Color','k', ...
+        'HorizontalAlignment','left', ...
+        'VerticalAlignment','bottom');
+end
+if isfield(s,'Positions') && isfield(s.Positions,'R') && all(isfinite(s.Positions.R))
+    R_pt = s.Positions.R;
+    text(ax, R_pt(1)+dx, R_pt(2)+dy, 'R', ...
+        'FontSize',fs_label, 'Color','k', ...
+        'HorizontalAlignment','left', ...
+        'VerticalAlignment','bottom');
+end
 end
 
 % function drawGroundSymbol(axh, Q_pt)
@@ -285,7 +348,7 @@ end
 % end
 
 function drawGroundSymbol(ax, jointCenter, lw_ground_hatch, lw_ground_base, lineLength)
-jointCenter=jointCenter';
+jointCenter=jointCenter(:);  % ensure column vector
 numLines = 3;
 % lineLength is passed in as argument (fixed to geometry, not axis limits)
 lineSpacing = lineLength/2;

@@ -33,8 +33,6 @@ function ax = rrr_plot(geo, mode, inputs, opts)
 % BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Contact: lionel.birglen@polymtl.ca
-% Code provided under GNU Affero General Public License v3.0
 
 if nargin < 4, opts = struct(); end
 if nargin < 3
@@ -100,18 +98,20 @@ switch mode
         if numel(inputs) < 3
             error('rrr_plot:BadInputs','Direct mode needs [theta1 theta2 theta3] (rad).');
         end
-        sol = rrr_direct_kinematics(geo,inputs(1),inputs(2),inputs(3));
+        sol = rrr_direct_kinematics(geo,inputs(1:3));
         if sol.valid
             local_draw(ax, sol, colors, ls, lw_link, lw_joint, ...
                 lw_ground_hatch, lw_ground_base, ms_joint, ms_ee, fs_label, gs_len, opts);
         end
 
     case {'inverse','i'}
-        if numel(inputs) < 4
-            error('rrr_plot:BadInputs','Inverse mode needs [Px Py phi elbow_config].');
+        if numel(inputs) < 3
+            error('rrr_plot:BadInputs','Inverse mode needs [Px Py phi].');
         end
-        Px=inputs(1); Py=inputs(2); phi=inputs(3); cfg=inputs(4);
-        sol = rrr_inverse_kinematics(geo,Px,Py,phi,cfg);
+        elbowSel = 1;
+        if isfield(opts,'elbow') && opts.elbow == -1, elbowSel = 2; end
+        sols = rrr_inverse_kinematics(geo,inputs(1:3));
+        sol  = sols(elbowSel);
         if sol.valid
             local_draw(ax, sol, colors, ls, lw_link, lw_joint, ...
                 lw_ground_hatch, lw_ground_base, ms_joint, ms_ee, fs_label, gs_len, opts);
@@ -121,13 +121,13 @@ switch mode
         end
         % Alternate elbow config
         if isfield(opts,'showBoth') && opts.showBoth
-            sol2 = rrr_inverse_kinematics(geo,Px,Py,phi,-cfg);
+            sol2 = sols(3 - elbowSel);
             if sol2.valid
                 opts2             = opts;
                 opts2.clearAxes   = false;
                 opts2.lineStyle   = '--';
                 opts2.showLabels   = true;
-                opts2.labelSubset  = 2;  % only label A; O, B, P already labelled by sol 1
+                opts2.labelSubset  = 2;
                 local_draw(ax, sol2, colors, '--', lw_link, lw_joint, ...
                     lw_ground_hatch, lw_ground_base, ms_joint, ms_ee, fs_label, gs_len, opts2);
             end

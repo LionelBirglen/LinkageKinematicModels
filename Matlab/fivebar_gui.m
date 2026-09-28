@@ -10,9 +10,7 @@ function fivebar_gui()
 %
 % BY:
 % Prof. Lionel Birglen
-% Polytechnique Montreal, 2025
-% Contact: lionel.birglen@polymtl.ca
-% Code provided under GNU Affero General Public License v3.0
+% Polytechnique Montreal, 2025-...
 
 % ----------------------------------------------------------------
 % 0) Environment detection
@@ -53,7 +51,7 @@ if isempty(existingMenus)
     uimenu(mFile, parentProp,'Print',          cbProp,@(~,~) cbPrint(hMenuFig));
     if isOctave
         set(findall(hMenuFig,'Label','Export EPS+PDF'),'Enable','off');
-        set(findall(hMenuFig,'Label','Print'),          'Enable','off');
+        set(findall(hMenuFig,'Label','Print'),         'Enable','off');
     end
     uimenu(mFile, parentProp,'Exit',           cbProp,@(~,~) cbExit(hMenuFig));
     uimenu(mView,    parentProp,'Reset View',  cbProp,@(~,~) cbResetView(hMenuFig));
@@ -103,7 +101,7 @@ if isOctave
 end
 
 % ----------------------------------------------------------------
-% 5) Mode panel
+% 5) Mode Selection (Direct / Inverse)
 % ----------------------------------------------------------------
 modePanel = uipanel('Title','Mode','FontSize',10,'Units','normalized', ...
     'Position',[0.02 0.68 0.32 0.08]);
@@ -124,7 +122,7 @@ dirPanelBot = [0.55 0.10];
 if isOctave
     dirLabels = {'th1','th2'};
 else
-    dirLabels = {[char(952),'1'],[char(952),'2']};
+    dirLabels = {[char(952),'1'],[char(952),'2']}; %θ
 end
 dirDefs     = [def_th1, def_th2];
 dirSl  = zeros(1,2);
@@ -158,8 +156,8 @@ inversePanel = uipanel('Title','Inverse Mode Sliders','FontSize',10, ...
 invPanelBot  = [0.55 0.10];
 invLabels    = {'Px','Py'};
 invDefs      = [def_Px, def_Py];
-invMins      = [-1.5, -1.5];
-invMaxs      = [ 1.5,  1.5];
+invMins      = [-1.5, -1.5];        %TO DO: adjust dynamically
+invMaxs      = [ 1.5,  1.5];        %TO DO: adjust dynamically
 invSl  = zeros(1,2);
 invTxt = zeros(1,2);
 for k = 1:2
@@ -175,6 +173,7 @@ for k = 1:2
         'BackgroundColor',[1 1 1], ...
         'String',sprintf('%.2f',invDefs(k)),'Callback',@(~,~) cbInvEdit(k));
 end
+
 % Start in Direct: disable inverse
 for k=1:2
     set(invSl(k),'Enable','off');
@@ -229,6 +228,12 @@ xlim(ax,lims(1:2)); ylim(ax,lims(3:4));
 % ----------------------------------------------------------------
 % 11) Store state
 % ----------------------------------------------------------------
+data.name          = 'Fivebar Linkage';
+data.type          = 4.01;
+data.info          = 'Lorem ipsum';
+data.author        = 'Lionel Birglen';
+data.date          = '20260628';
+data.version       = 0.1;
 data.geoEd        = geoEd;
 data.modeStr      = 'Direct';
 data.rad1         = rad1;
@@ -248,6 +253,8 @@ data.Py_offset    = def_Py;
 data.info_text    = info_text;
 data.ax           = ax;
 data.limits       = lims;
+data.userZoomed   = false;  % true after user pans/zooms
+data.firstPlot    = true;   % skip zoom detection on first draw
 guidata(hFig, data);
 
 updatePlot([],[]);
@@ -353,18 +360,25 @@ updatePlot([],[]);
             selSol = [];
             for k = 1:4
                 if get(data.sols_checkbox(k),'Value')
-                    selSol(end+1) = k; %#ok<AGROW>
+                    selSol(end+1) = k; 
                 end
             end
 
-            % Recompute limits from current geometry
+            % Recompute auto limits from current geometry
             data.limits = computeLimits(g(1),g(2),g(3),g(4),g(5),g(6),g(7));
             % Update inverse slider ranges to match geometry
             set(data.invSl(1),'Min',data.limits(1),'Max',data.limits(2));
             set(data.invSl(2),'Min',data.limits(3),'Max',data.limits(4));
+            % Save current axes limits BEFORE clearing (user may have zoomed/panned)
+            prevXLim = xlim(data.ax);
+            prevYLim = ylim(data.ax);
+            tol = (data.limits(2)-data.limits(1)) * 1e-3;
+            userZoomed = data.userZoomed || ...
+                abs(prevXLim(1)-data.limits(1))>tol || abs(prevXLim(2)-data.limits(2))>tol || ...
+                abs(prevYLim(1)-data.limits(3))>tol || abs(prevYLim(2)-data.limits(4))>tol;
             opts.ax         = data.ax;
             opts.clearAxes  = true;
-            opts.limits     = data.limits;
+            opts.limits     = [];  
             opts.showLabels = true;
             opts.solutions  = selSol;
 
@@ -427,17 +441,23 @@ updatePlot([],[]);
                 end
             end
 
-            axis(data.ax,'equal');
-            xlim(data.ax, data.limits(1:2));
-            ylim(data.ax, data.limits(3:4));
+            if userZoomed
+                xlim(data.ax, prevXLim);
+                ylim(data.ax, prevYLim);
+            else
+                axis(data.ax,'equal');
+                xlim(data.ax, data.limits(1:2));
+                ylim(data.ax, data.limits(3:4));
+            end
+
             set(data.info_text,'String',info);
             guidata(hFig,data);
             drawnow();
 
         catch ME
             cla(ax);
-            text(0,0,'Error','Parent',ax,'Color','r','FontSize',14,'HorizontalAlignment','center');
-            set(data.info_text,'String',ME.message);
+            text(0,0,'Unreachable','Parent',ax,'Color','r','FontSize',14,'HorizontalAlignment','center');
+            set(data.info_text,'String','Unreachable configuration');
         end
     end
 
@@ -494,7 +514,7 @@ updatePlot([],[]);
         data = guidata(hFig);
         tnow = now*24*3600;
         if strcmp(data.modeStr,'Direct')
-            A1=60; f1=0.1; A2=45; f2=0.15;
+            A1=60; f1=0.05; A2=45; f2=0.07;
             th1 = data.th1_offset + A1*sin(2*pi*f1*tnow);
             th2 = data.th2_offset + A2*sin(2*pi*f2*tnow);
             th1 = max(-180,min(180,th1));
@@ -605,8 +625,10 @@ updatePlot([],[]);
 
     function cbResetView(hFig)
         data = guidata(hFig);
-        xlim(data.ax,data.limits(1:2)); ylim(data.ax,data.limits(3:4));
+        data.userZoomed = false;
+        guidata(hFig,data);
         axis(data.ax,'equal');
+        xlim(data.ax,data.limits(1:2)); ylim(data.ax,data.limits(3:4));
     end
 
     function cbPreferences(hFig)

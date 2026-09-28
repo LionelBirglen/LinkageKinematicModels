@@ -33,7 +33,7 @@ function sol = fivebar_direct_kinematics(geo, theta)
 %           .phi        = φ                    (orientation of the “output link” A→B, in degrees)
 %           .P          = [Px; Py]             (coordinates of the point of interest on link A→B)
 %           .theta      = [θ1; θ2]             (inputs in degrees)
-%           .valid      = 0 or 1               (1 if a real intersection exists, 0 otherwise)
+%           .valid      = 0 or 1               (1 if this solution exists, 0 otherwise)
 %
 %   NOTES:
 %     • We treat the left coupler (A→B) as the “output link” whose orientation φ is returned (in degrees).
@@ -41,6 +41,7 @@ function sol = fivebar_direct_kinematics(geo, theta)
 %       measured from the direction A→B (i.e. φ + η in the global frame).
 %     • If there are no solutions, both sol(1).valid and sol(2).valid are set to 0, and the
 %       Positions fields are filled with NaN.
+%     • Twists coordinates are [wz;vx;vy] expressed in frame Oxy
 %
 %   Example:
 %   % Given a five‐bar with
@@ -59,19 +60,29 @@ function sol = fivebar_direct_kinematics(geo, theta)
 %
 %   BY:
 %   Prof. Lionel Birglen
-%  Polytechnique Montreal, 2025
-%   Last Update: 2025/11/05
-%   Contact: lionel.birglen@polymtl.ca
+%   Polytechnique Montreal, 2025
 
-% Unpack geometry
-a     = geo(1);  % left input crank (O→A)
-b     = geo(2);  % left coupler = "output link" (A→B)
-c     = geo(3);  % right coupler (C→B)
-d     = geo(4);  % right input crank (D→C)
-e     = geo(5);  % ground spacing between O and D
-alpha = geo(6);  % radial distance along link A→B for point P
-h     = geo(7);  % radial distance along link A→B for point P
-eta   = geo(8);  % angle (in degrees) from A→B at which P is located
+% Parse geometry (accepts struct with fields a,b,c,d,e,alpha,h,eta
+% OR numeric vector [a b c d e alpha h eta] for backward compatibility)
+if isstruct(geo)
+    a     = geo.a;
+    b     = geo.b;
+    c     = geo.c;
+    d     = geo.d;
+    e     = geo.e;
+    alpha = geo.alpha;
+    h     = geo.h;
+    eta   = geo.eta;
+else
+    a     = geo(1);  % left input crank (O→A)
+    b     = geo(2);  % left coupler = "output link" (A→B)
+    c     = geo(3);  % right coupler (C→B)
+    d     = geo(4);  % right input crank (D→C)
+    e     = geo(5);  % ground spacing between O and D
+    alpha = geo(6);  % angle of O→D from x-axis (degrees)
+    h     = geo(7);  % radial distance along link A→B for point P
+    eta   = geo(8);  % angle (in degrees) from A→B at which P is located
+end
 
 % Convert input angles from degrees to radians for computation
 theta1 = deg2rad(theta(1));  % left crank angle (radians)
@@ -149,7 +160,6 @@ l = (b^2 - c^2 + d_AC^2) / (2 * d_AC);
 h_int = sqrt(max(b^2 - l^2, 0));
 
 % Point P2: projection of B onto the line AC
-%   P2 = A + l * (C - A) / d_AC
 P2 = A + (l / d_AC) * (C - A);
 
 % Unit‐perpendicular vector from AC
@@ -164,6 +174,7 @@ B2 = P2 - h_int * [ux; uy];
 B_candidates = {B1, B2};
 for k = 1:2
     Bk = B_candidates{k};
+    
     % Compute orientation φ of “output link” (A→Bk)
     dx = Bk(1) - Ax;
     dy = Bk(2) - Ay;

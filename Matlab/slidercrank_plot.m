@@ -27,12 +27,12 @@ function ax = slidercrank_plot(geo, mode, inputs, opts)
 % BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025
-% Contact: lionel.birglen@polymtl.ca
-% Code provided under GNU Affero General Public License v3.0
 
 if nargin < 4, opts = struct(); end
 
-% --- Octave vs MATLAB scale factors -----------------------------------
+% ----------------------------------------------------------------
+% 0) Environment detection
+% ----------------------------------------------------------------
 isOctave = exist('OCTAVE_VERSION','builtin') ~= 0;
 if isOctave
     lw_link         = 0.6;
@@ -122,7 +122,7 @@ end
 showFirst = ~isfield(opts,'showFirst') || opts.showFirst;
 if showFirst
     if sol.valid
-        local_draw(ax, sol, [1 0 0; 0 0.7 0], ls, lw_link, lw_joint, ...
+        local_draw(ax, sol, [1 0 0], ls, lw_link, lw_joint, ...
             ms_joint, ms_ee, fs_label, gs_len, slider_angle, opts, false);
     else
         text(0, 0, 'Sol 1: Unreachable', 'Parent', ax, 'Color', 'r', ...
@@ -143,7 +143,7 @@ if isfield(opts,'showBoth') && opts.showBoth
         opts2.clearAxes  = false;
         opts2.lineStyle  = '--';
         opts2.labelSubset = [3 4];  % label B and P for alternate (O and A already drawn)
-        local_draw(ax, sol2, [1 0 0; 0 0.7 0], '--', lw_link, lw_joint, ...
+        local_draw(ax, sol2, [0 0 1], ls, lw_link, lw_joint, ...
             ms_joint, ms_ee, fs_label, gs_len, slider_angle, opts2, true);
     end
 end
@@ -160,7 +160,7 @@ end
 % ======================================================================
 %  Local helpers
 % ======================================================================
-function local_draw(ax, sol, colors, ls, lw_link, lw_joint, ...
+function local_draw(ax, sol, col, ls, lw_link, lw_joint, ...
     ms_joint, ms_ee, fs_label, gs_len, slider_angle, opts, isAlt)
 
 O = sol.Positions.O;
@@ -169,18 +169,21 @@ B = sol.Positions.B;
 P = sol.Positions.P;
 slider_dir = sol.slider_dir;
 
-% Crank link O->A (red)
-plot(ax, [O(1) A(1)], [O(2) A(2)], '-', 'Color', colors(1,:), ...
-    'LineStyle', ls, 'LineWidth', lw_link);
-% Coupler link A->B (green); B is the pin that rides in the slider block
-plot(ax, [A(1) B(1)], [A(2) B(2)], '-', 'Color', colors(2,:), ...
-    'LineStyle', ls, 'LineWidth', lw_link);
-% Extension link B->P (blue)
-plot(ax, [B(1) P(1)], [B(2) P(2)], '-', 'Color', [0 0 1], ...
-    'LineStyle', ls, 'LineWidth', lw_link);
+% All links in solution colour
+plot(ax, [O(1) A(1)], [O(2) A(2)], '-', 'Color', col, 'LineStyle', ls, 'LineWidth', lw_link);
+plot(ax, [A(1) B(1)], [A(2) B(2)], '-', 'Color', col, 'LineStyle', ls, 'LineWidth', lw_link);
+plot(ax, [B(1) P(1)], [B(2) P(2)], '-', 'Color', col, 'LineStyle', ls, 'LineWidth', lw_link);
 
-% P marker as cross (like fourbar/rrr end-effectors)
+% P marker as cross
 plot(ax, P(1), P(2), 'kx', 'MarkerSize', ms_ee, 'LineWidth', lw_link);
+
+% Triangle A-B-Q with transparency if Q is defined
+if isfield(sol,'Positions') && isfield(sol.Positions,'Q') && all(isfinite(sol.Positions.Q))
+    Q = sol.Positions.Q;
+    patch('XData', [A(1) B(1) Q(1)], 'YData', [A(2) B(2) Q(2)], ...
+        'FaceColor', col, 'EdgeColor', col, 'FaceAlpha', 0.5, 'Parent', ax);
+    plot(ax, Q(1), Q(2), 'kx', 'MarkerSize', ms_ee, 'LineWidth', lw_link);
+end
 
 % Revolute joints O, A, B as white circles (P is a cross, not a circle)
 jx = [O(1) A(1) B(1)];
@@ -202,21 +205,42 @@ if ~isfield(opts,'showLabels') || opts.showLabels
             'FontSize', fs_label, 'Color', 'k', ...
             'HorizontalAlignment','left','VerticalAlignment','bottom');
     end
+    % Q label
+    if isfield(sol,'Positions') && isfield(sol.Positions,'Q') && all(isfinite(sol.Positions.Q))
+        Q_lbl = sol.Positions.Q;
+        text(ax, Q_lbl(1)+dx, Q_lbl(2)+dx, 'Q', 'FontSize', fs_label, 'Color', 'k', ...
+            'HorizontalAlignment','left','VerticalAlignment','bottom');
+    end
 end
 end
 
 
 function local_drawSlider(ax, centre, slider_dir, slider_angle, lw, gs_len)
-% Draw the fixed slider block (grounded prismatic joint) as a rectangle.
-% centre is a fixed point — does not change with crank angle.
+% Draw the fixed slider block (grounded prismatic joint) as a rectangle,
+% with a ground symbol on the outer face, rotated with slider_angle.
 perp_dir = [-sin(slider_angle); cos(slider_angle)];
 sl = gs_len * 3.0;   % block length along rail
 sw = gs_len * 1.8;   % block width across rail
-c = [centre + sl/2*slider_dir + sw/2*perp_dir, ...
-     centre + sl/2*slider_dir - sw/2*perp_dir, ...
-     centre - sl/2*slider_dir - sw/2*perp_dir, ...
-     centre - sl/2*slider_dir + sw/2*perp_dir];
-fill(ax, c(1,:), c(2,:), [0.75 0.85 1.0], 'FaceAlpha', 0.6, 'EdgeColor','k','LineWidth',lw);
+corners = [centre + sl/2*slider_dir + sw/2*perp_dir, ...
+           centre + sl/2*slider_dir - sw/2*perp_dir, ...
+           centre - sl/2*slider_dir - sw/2*perp_dir, ...
+           centre - sl/2*slider_dir + sw/2*perp_dir];
+fill(ax, corners(1,:), corners(2,:), [0.75 0.85 1.0], ...
+    'FaceAlpha', 0.6, 'EdgeColor','k','LineWidth',lw);
+% Ground symbol on outer face (away from rail), rotated with slider
+gs_base  = centre - sw/2 * perp_dir;
+numLines = 3;
+spacing  = gs_len * 0.6;
+hatch_len = gs_len * 0.8;
+base_half = (numLines-1)/2 * spacing;
+p1 = gs_base - base_half * slider_dir;
+p2 = gs_base + base_half * slider_dir;
+plot(ax, [p1(1) p2(1)], [p1(2) p2(2)], 'k', 'LineWidth', lw);
+for i = 0:numLines-1
+    v1 = gs_base + (i*spacing - base_half) * slider_dir;
+    v2 = v1 + hatch_len * (cos(pi/4)*(-slider_dir) + sin(pi/4)*(-perp_dir));
+    plot(ax, [v1(1) v2(1)], [v1(2) v2(2)], 'k', 'LineWidth', lw);
+end
 end
 
 

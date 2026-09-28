@@ -7,9 +7,7 @@ function slidercrank_gui()
 %
 % BY:
 % Prof. Lionel Birglen
-% Polytechnique Montreal, 2025
-% Contact: lionel.birglen@polymtl.ca
-% Code provided under GNU Affero General Public License v3.0
+% Polytechnique Montreal, 2025-...
 
 % ----------------------------------------------------------------
 % 0) Environment detection
@@ -40,6 +38,7 @@ else;          parentProp='Label'; cbProp='Callback'; end
 
 existingMenus = findall(hMenuFig,'Type','uimenu','-depth',1);
 if isempty(existingMenus)
+    % ---- Top level --
     mFile    = uimenu(hMenuFig, parentProp,'File');
     mView    = uimenu(hMenuFig, parentProp,'View');
     mOptions = uimenu(hMenuFig, parentProp,'Options');
@@ -60,61 +59,67 @@ end
 % ----------------------------------------------------------------
 % 3) Defaults
 % ----------------------------------------------------------------
-def_a     = 50;
-def_b     = 120;
-def_c     = 30;      % extension link B->P
-def_sang  = 0;       % slider angle (deg)
-def_phi   = 30;      % crank angle (deg)
-def_xs    = 140;     % slider position
-def_cfg   = 1;       % +1 elbow-down
+def_a     = 1;
+def_b     = 0.8;
+def_c     = 0.5;        % extension link B->P
+def_sang  = 0;          % slider angle (deg)
+def_hq    = 0.3;        % distance A->Q along coupler
+def_etaq  = 45;         % angle from AB to AQ (deg)
+def_phi   = 30;         % crank angle (deg)
+def_xs    = 2;          % slider position
+def_cfg   = 1;          % +1 elbow-down
 
 % ----------------------------------------------------------------
-% 4) Controls
+% 4) Geometry panel  
 % ----------------------------------------------------------------
-
-% Geometry panel: a, b, slider_angle side by side
 geoPanel = uipanel('Title','Geometry','FontSize',10, ...
-    'Units','normalized','Position',[0.02 0.90 0.32 0.08]);
-geoNames = {'a (OA)','b (AB)','c (BP)','Ang. (deg)'};
-geoEd    = zeros(1,4);
-geoDefaults = {def_a, def_b, def_c, def_sang};
-xLbl = [-0.00 0.23 0.46 0.71];
-xEd  = [0.03 0.26 0.49 0.79];
-wLbl = [0.12 0.12 0.12 0.18];
-wEd  = 0.10;  hRow = 0.65;  yRow = 0.20;
-for k = 1:4
-    labEd(k)=uicontrol('Parent',geoPanel,'Style','text','Units','normalized', ...
-        'Position',[xLbl(k) yRow wLbl(k) hRow], ...
+    'Units','normalized','Position',[0.02 0.85 0.32 0.13]);
+geoNames = {'a (OA)','b (AB)','c (BP)','δ (xOC, deg)','e (AQ)','ϵ (BAP, deg)'};
+geoEd      = zeros(1,6);
+geoDefaults = {def_a, def_b, def_c, def_sang, def_hq, def_etaq};
+xLbl = [0.00 0.30 0.60 0.00 0.35 0.64]; wLbl = [0.13 0.13 0.13 0.22 0.13 0.22];
+xEd  = [0.15 0.45 0.75 0.23 0.50 0.87]; wEd  = 0.12;
+hRow  = 0.25; yRow1 = 0.60; yRow2 = 0.15;
+for k = 1:3
+    labEd(k) = uicontrol('Parent',geoPanel,'Style','text','Units','normalized', ...
+        'Position',[xLbl(k) yRow1 wLbl(k) hRow], ...
         'String',geoNames{k},'HorizontalAlignment','right');
     geoEd(k) = uicontrol('Parent',geoPanel,'Style','edit','Units','normalized', ...
-        'Position',[xEd(k)+0.1 yRow+0.1 wEd hRow], ...
+        'Position',[xEd(k) yRow1 wEd hRow], ...
+        'String',num2str(geoDefaults{k}),'Callback',@updatePlot);
+end
+for k = 4:6
+    labEd(k) = uicontrol('Parent',geoPanel,'Style','text','Units','normalized', ...
+        'Position',[xLbl(k) yRow2 wLbl(k) hRow], ...
+        'String',geoNames{k},'HorizontalAlignment','right');
+    geoEd(k) = uicontrol('Parent',geoPanel,'Style','edit','Units','normalized', ...
+        'Position',[xEd(k) yRow2 wEd hRow], ...
         'String',num2str(geoDefaults{k}),'Callback',@updatePlot);
 end
 if isOctave
-    for k = 1:4
+    for k = 1:6
         set(geoEd(k),'FontSize',7);
         set(labEd(k),'FontSize',7);
-        set(labEd(k),'Position',get(labEd(k),'Position')-0.01)
     end
 end
 
 %------------------------------------------------------
-% Mode Selection (Direct / Inverse)
+% 5) Mode Selection (Direct / Inverse)
 %------------------------------------------------------
 modePanel = uipanel('Title','Mode','FontSize',10,'Units','normalized', ...
-    'Position',[0.02 0.82 0.32 0.07]);
-rad1 = uicontrol('Style','radiobutton','String','Direct', ...
-    'Units','normalized','Position',[0.1 0.83 0.08 0.035], ...
+    'Position',[0.02 0.78 0.32 0.07]);
+rad1 = uicontrol('Parent',modePanel,'Style','radiobutton','String','Direct', ...
+    'Units','normalized','Position',[0.05 0.15 0.42 0.70], ...
     'Value',1,'Callback',@cbRad1);
-rad2 = uicontrol('Style','radiobutton','String','Inverse', ...
-    'Units','normalized','Position',[0.20 0.83 0.08 0.035], ...
+rad2 = uicontrol('Parent',modePanel,'Style','radiobutton','String','Inverse', ...
+    'Units','normalized','Position',[0.55 0.15 0.42 0.70], ...
     'Value',0,'Callback',@cbRad2);
 
-%------------------------------------------------------
-% Direct Mode Controls
-%------------------------------------------------------
+% ----------------------------------------------------------------
+% 6) Direct mode slider (theta)
+% ----------------------------------------------------------------
 directPanel = uipanel('Title','Direct Mode Sliders','FontSize',10, ...
-    'Units','normalized','Position',[0.02 0.73 0.32 0.08]);
+    'Units','normalized','Position',[0.02 0.69 0.32 0.08]);
 dirPanelBot = [0.25];
 uicontrol('Parent',directPanel,'Style','text','Units','normalized', ...
     'Position',[0.04 0.25 0.1 0.60],'String','θ','HorizontalAlignment','left');
@@ -131,11 +136,11 @@ if isOctave
     set(dirTxt(1),'Position',[0.79 0.15 0.19 0.70]);
 end
 
-%------------------------------------------------------
-% Inverse Mode Controls
-%------------------------------------------------------
+% ----------------------------------------------------------------
+% 7) Inverse mode slider (x)
+% ----------------------------------------------------------------
 inversePanel = uipanel('Title','Inverse Mode Sliders','FontSize',10, ...
-    'Units','normalized','Position',[0.02 0.64 0.32 0.08]);
+    'Units','normalized','Position',[0.02 0.60 0.32 0.08]);
 uicontrol('Parent',inversePanel,'Style','text','Units','normalized', ...
     'Position',[0.04 0.25 0.1 0.60],'String','x','HorizontalAlignment','left');
 invSl(1) = uicontrol('Parent',inversePanel,'Style','slider','Units','normalized', ...
@@ -151,7 +156,9 @@ if isOctave
     set(invTxt(1),'Position',[0.79 0.15 0.19 0.70]);
 end
 
-% Panel backgrounds white in Octave
+% Start in Direct mode: disable inverse
+set(invSl(1), 'Enable','off');
+set(invTxt(1),'Enable','off');
 if isOctave
     set(geoPanel,    'BackgroundColor',[1 1 1]);
     set(modePanel,   'BackgroundColor',[1 1 1]);
@@ -159,27 +166,33 @@ if isOctave
     set(inversePanel,'BackgroundColor',[1 1 1]);
 end
 
-% Start in Direct mode: disable inverse
-set(invSl(1), 'Enable','off');
-set(invTxt(1),'Enable','off');
-
-% Checkbox: display solutions
+% ----------------------------------------------------------------
+% 8) Display solutions panel (2 checkboxes)
+% ----------------------------------------------------------------
 solsPanel = uipanel('Title','Display solutions:','FontSize',10, ...
-    'Units','normalized','Position',[0.02 0.55 0.32 0.08]);
-for i=1:2
-    sols_checkbox(i) = uicontrol('Parent',solsPanel,'Units','normalized','Style','checkbox','Position',[0.2+0.2*i 0.3 0.7 0.6], ...
-        'String',num2str(i),'Value',1,'Callback',@updatePlot);
-end
+    'Units','normalized','Position',[0.02 0.51 0.32 0.08]);
+sols_checkbox(1) = uicontrol('Parent',solsPanel,'Units','normalized','Style','checkbox','Position',[0.4 0.3 0.7 0.6], ...
+    'String','1','Value',1,'Callback',@updatePlot);
+sols_checkbox(2) = uicontrol('Parent',solsPanel,'Units','normalized','Style','checkbox','Position',[0.6 0.3 0.7 0.6], ...
+    'String','2','Value',0,'Callback',@updatePlot);
 if isOctave, set(solsPanel,'BackgroundColor',[1 1 1]); end
 
-% Animate button and info text
+% ----------------------------------------------------------------
+% 9) Trajectory, animate button and info text
+% ----------------------------------------------------------------
+traj_checkbox = uicontrol('Style','checkbox','String','Show Q trajectory', ...
+    'Units','normalized','Position',[0.02 0.47 0.3 0.03], ...
+    'Value',0,'Callback',@updatePlot);%[20 178 260 22]
+
 animate_btn = uicontrol('Style','pushbutton','String','Animate', ...
-    'Position',[20 290 285 30],'Callback',@toggleAnimation);
+    'Units','normalized','Position',[0.02 0.41 0.3 0.05],'Callback',@toggleAnimation);
 
-info_text = uicontrol('Style','text','Position',[20 225 285 60], ...
-    'FontSize',10-1*isOctave,'HorizontalAlignment','left');
+info_text = uicontrol('Style','text','Units','normalized','Position',...
+    [0.02 0.2 0.3 0.2], 'FontSize',10-1*isOctave,'HorizontalAlignment','left');
 
-% Axes
+% ----------------------------------------------------------------
+% 10) Axes
+% ----------------------------------------------------------------
 ax = axes('Units','pixels','Position',[310 50 560 500]);
 axis equal;
 grid on;
@@ -193,13 +206,20 @@ end
 hold(ax,'on');
 
 % ----------------------------------------------------------------
-% 5) Store state
+% 11) Store state
 % ----------------------------------------------------------------
+data.name          = 'Slidercrank Linkage';
+data.type          = 3.01;
+data.info          = 'Lorem ipsum';
+data.author        = 'Lionel Birglen';
+data.date          = '20260628';
+data.version       = 0.1;
 data.geoEd        = geoEd;
 data.rad1         = rad1;
 data.rad2         = rad2;
 data.modeStr      = 'Direct';
-data.sols_checkbox = sols_checkbox;
+data.sols_checkbox  = sols_checkbox;
+data.traj_checkbox  = traj_checkbox;
 data.dirSl        = dirSl;
 data.dirTxt       = dirTxt;
 data.invSl        = invSl;
@@ -213,6 +233,8 @@ data.time_offset  = 0;
 data.phi_offset   = def_phi;
 data.xs_offset    = def_xs;
 data.limits       = [-(def_a+def_b) (def_a+def_b) -(def_a+def_b) (def_a+def_b)];
+data.userZoomed   = false;  % true after user pans/zooms
+data.firstPlot    = true;   % skip zoom detection on first draw
 guidata(hFig, data);
 
 updatePlot([],[]);
@@ -295,14 +317,25 @@ updatePlot([],[]);
             R   = (a + b + abs(c)) * 1.15;
             lim = [-R R -R R];
             data.limits = lim;
-
-            % Inverse slider controls x_P; x_B in [-(a+b),(a+b)] => x_P in that range shifted by c
             set(data.invSl(1),'Min',-(a+b)+c,'Max',(a+b)+c);
-
+            prevXLim = xlim(data.ax);
+            prevYLim = ylim(data.ax);
+            tol = (data.limits(2)-data.limits(1)) * 1e-3;
+            if ~isfield(data,'userZoomed'), data.userZoomed = false; end
+            if ~isfield(data,'firstPlot'),  data.firstPlot  = true;  end
+            if data.firstPlot
+                userZoomed = false;
+                data.firstPlot = false;
+                guidata(hFig,data);
+            else
+                userZoomed = data.userZoomed || ...
+                    abs(prevXLim(1)-data.limits(1))>tol || abs(prevXLim(2)-data.limits(2))>tol || ...
+                    abs(prevYLim(1)-data.limits(3))>tol || abs(prevYLim(2)-data.limits(4))>tol;
+            end
             opts.ax         = data.ax;
             opts.clearAxes  = true;
             opts.showLabels = true;
-            opts.limits     = lim;
+            opts.limits     = [];  
             sol1_on = get(data.sols_checkbox(1),'Value');
             sol2_on = get(data.sols_checkbox(2),'Value');
             opts.showBoth   = sol2_on;
@@ -320,16 +353,18 @@ updatePlot([],[]);
                     sol = slidercrank_direct_kinematics(geo,deg2rad(phi_deg),cfg1);
                     if sol.valid
                         xP1 = dot(sol.Positions.P - sol.Positions.O, sol.slider_dir);
-                        info = sprintf('%s\nSol 1: phi=%.2f deg   x=%.2f', info, phi_deg, xP1);
+                        rQ1=sol.Positions.Q;
+                        info = sprintf('%s\nSol 1: θ=%.2f deg   x=%.2f   rQ=[%.2f,%.2f]', info, phi_deg, xP1, rQ1(1), rQ1(2));
                     else
-                        info = sprintf('%s\nSol 1: unreachable', info);
+                        info = sprintf('%s\nSol 1: θ=%.2f deg   unreachable', info);
                     end
                 end
                 if sol2_on
-                    sol2 = slidercrank_direct_kinematics(geo,deg2rad(phi_deg),cfg2);
+                    sol2 = slidercrank_direct_kinematics(geo,deg2rad(phi_deg),cfg2);                    
                     if sol2.valid
                         xP2 = dot(sol2.Positions.P - sol2.Positions.O, sol2.slider_dir);
-                        info = sprintf('%s\nSol 2: phi=%.2f deg   x=%.2f', info, phi_deg, xP2);
+                        rQ2=sol2.Positions.Q;
+                        info = sprintf('%s\nSol 2: θ=%.2f deg   x=%.2f   rQ=[%.2f,%.2f]', info, phi_deg, xP2, rQ2(1), rQ2(2));
                     else
                         info = sprintf('%s\nSol 2: unreachable', info);
                     end
@@ -345,17 +380,19 @@ updatePlot([],[]);
                 slidercrank_plot(geo,'inverse',inputs,opts);
                 info = 'Inverse mode:';
                 if sol1_on
-                    sol = slidercrank_inverse_kinematics(geo,xs,cfg1);
-                    if sol.valid
-                        info = sprintf('%s\nSol 1: x=%.2f   phi=%.2f deg', info, xP, rad2deg(sol.phi));
+                    sol1 = slidercrank_inverse_kinematics(geo,xs,cfg1);
+                    rQ1=sol1.Positions.Q;
+                    if sol1.valid
+                        info = sprintf('%s\nSol 1: x=%.2f   θ=%.2f deg   rQ=[%.2f,%.2f]', info, xP, rad2deg(sol1.phi), rQ1(1), rQ1(2));
                     else
                         info = sprintf('%s\nSol 1: unreachable', info);
                     end
                 end
                 if sol2_on
                     sol2 = slidercrank_inverse_kinematics(geo,xs,cfg2);
+                    rQ2=sol2.Positions.Q;
                     if sol2.valid
-                        info = sprintf('%s\nSol 2: x=%.2f   phi=%.2f deg', info, xP, rad2deg(sol2.phi));
+                        info = sprintf('%s\nSol 2: x=%.2f   θ=%.2f deg   rQ=[%.2f,%.2f]', info, xP, rad2deg(sol2.phi), rQ2(1), rQ2(2));
                     else
                         info = sprintf('%s\nSol 2: unreachable', info);
                     end
@@ -363,9 +400,60 @@ updatePlot([],[]);
                 if strcmp(info,'Inverse mode:'), info = 'Inverse mode: no solution selected'; end
             end
 
-            axis(data.ax,'equal');
-            xlim(data.ax, lim(1:2));
-            ylim(data.ax, lim(3:4));
+            if userZoomed
+                xlim(data.ax, prevXLim);
+                ylim(data.ax, prevYLim);
+            else
+                axis(data.ax,'equal');
+                xlim(data.ax, lim(1:2));
+                ylim(data.ax, lim(3:4));
+            end
+    
+            % --- Q trajectory ---
+            traj_colors = [1 0 0; 0 0 1];
+            traj_styles = {':', '--'};
+            if get(data.traj_checkbox,'Value')
+                N_traj = 360;
+                lw_t = 1.0; if isOctave, lw_t = 0.4; end
+                if strcmp(data.modeStr,'Direct')
+                    ths = linspace(-pi, pi, N_traj);
+                    for ki = 1:2
+                        if ~get(data.sols_checkbox(ki),'Value'), continue; end
+                        cfg_k = sc_cfg(ki);
+                        Qtx = nan(1,N_traj); Qty = nan(1,N_traj);
+                        for ii = 1:N_traj
+                            try
+                                st = slidercrank_direct_kinematics(geo, ths(ii), cfg_k);
+                                if st.valid && all(isfinite(st.Positions.Q))
+                                    Qtx(ii) = st.Positions.Q(1);
+                                    Qty(ii) = st.Positions.Q(2);
+                                end
+                            end
+                        end
+                        plot(data.ax, Qtx, Qty, traj_styles{ki}, ...
+                            'Color', traj_colors(ki,:), 'LineWidth', lw_t);
+                    end
+                else
+                    xs_vals = linspace(-(a+b), (a+b), N_traj);
+                    for ki = 1:2
+                        if ~get(data.sols_checkbox(ki),'Value'), continue; end
+                        cfg_k = sc_cfg(ki);
+                        Qtx = nan(1,N_traj); Qty = nan(1,N_traj);
+                        for ii = 1:N_traj
+                            try
+                                st = slidercrank_inverse_kinematics(geo, xs_vals(ii), cfg_k);
+                                if st.valid && all(isfinite(st.Positions.Q))
+                                    Qtx(ii) = st.Positions.Q(1);
+                                    Qty(ii) = st.Positions.Q(2);
+                                end
+                            end
+                        end
+                        plot(data.ax, Qtx, Qty, traj_styles{ki}, ...
+                            'Color', traj_colors(ki,:), 'LineWidth', lw_t);
+                    end
+                end
+            end
+
             set(data.info_text,'String',info);
             guidata(hFig,data);
             drawnow();
@@ -377,17 +465,22 @@ updatePlot([],[]);
         end
     end
 
-    function [geo,a,b,c,sang] = readGeo()
+    function [geo,a,b,c,sang] = readGeo()   %TO DO: output a struct
         data = guidata(hFig);
         a    = str2double(get(data.geoEd(1),'String'));
         b    = str2double(get(data.geoEd(2),'String'));
         c    = str2double(get(data.geoEd(3),'String'));
         sang = str2double(get(data.geoEd(4),'String'));
+        hq   = str2double(get(data.geoEd(5),'String'));
+        etaq = str2double(get(data.geoEd(6),'String'));
         if isnan(a)||a<=0, a=def_a; end
         if isnan(b)||b<=0, b=def_b; end
         if isnan(c), c=def_c; end
         if isnan(sang), sang=def_sang; end
-        geo = struct('a',a,'b',b,'c',c,'slider_angle',deg2rad(sang));
+        if isnan(hq),   hq=def_hq;    end
+        if isnan(etaq), etaq=def_etaq; end
+        geo = struct('a',a,'b',b,'c',c,'slider_angle',deg2rad(sang), ...
+                     'h_q',hq,'eta_q',deg2rad(etaq));
     end
 
     % ---- Animation ---------------------------------------------------
@@ -433,7 +526,7 @@ updatePlot([],[]);
     function animateStep(~,~)
         data = guidata(hFig);
         tnow  = now*24*3600;
-        speed = 40;  % deg/s for direct; units/s for inverse
+        speed = 10;  % deg/s for direct; units/s for inverse
         if strcmp(data.modeStr,'Direct')
             phi = mod(data.phi_offset + speed*(tnow-data.time_offset) + 180, 360) - 180;
             set(data.dirSl(1),'Value',phi);
@@ -461,10 +554,12 @@ updatePlot([],[]);
         if ~isfield(s,'session'), errordlg('Unrecognised session file.','Open Error'); return; end
         sess = s.session;
         data = guidata(hFig);
-        set(data.geoEd(1),'String',num2str(sess.a));
-        set(data.geoEd(2),'String',num2str(sess.b));
-        if isfield(sess,'c'), set(data.geoEd(3),'String',num2str(sess.c)); end
-        set(data.geoEd(4),'String',num2str(sess.sang));
+        if isfield(sess,'a'),    set(data.geoEd(1),'String',num2str(sess.a));    end
+        if isfield(sess,'b'),    set(data.geoEd(2),'String',num2str(sess.b));    end
+        if isfield(sess,'c'),    set(data.geoEd(3),'String',num2str(sess.c));    end
+        if isfield(sess,'sang'), set(data.geoEd(4),'String',num2str(sess.sang)); end
+        if isfield(sess,'h_q'),  set(data.geoEd(5),'String',num2str(sess.h_q));  end
+        if isfield(sess,'etaq'), set(data.geoEd(6),'String',num2str(sess.etaq)); end
         set(data.dirSl(1), 'Value',sess.phi);
         set(data.dirTxt(1),'String',sprintf('%.1f',sess.phi));
         xs = max(get(data.invSl(1),'Min'),min(get(data.invSl(1),'Max'),sess.xs));
@@ -485,8 +580,21 @@ updatePlot([],[]);
                 set(data.sols_checkbox(ii),'Value',sess.solsVisible(ii));
             end
         end
+        if isfield(sess,'showQTraj')
+            set(data.traj_checkbox,'Value',sess.showQTraj);
+        end
+        if isfield(sess,'axesXLim') && isfield(sess,'axesYLim')
+            data.userZoomed = true;
+            data.firstPlot  = false;
+            data.userXLim   = sess.axesXLim;
+            data.userYLim   = sess.axesYLim;
+        end
         guidata(hFig,data);
         updatePlot([],[]);
+        if isfield(sess,'axesXLim') && isfield(sess,'axesYLim')
+            xlim(data.ax, sess.axesXLim);
+            ylim(data.ax, sess.axesYLim);
+        end
     end
 
     function cbSave(hFig)
@@ -494,15 +602,20 @@ updatePlot([],[]);
         [f,p] = uiputfile({'*.mat','MAT-file (*.mat)'},'Save Session As','slidercrank_session.mat');
         warning('on','all');
         if isequal(f,0), return; end
-        data = guidata(hFig);
+        data = guidata(hFig);       %TO DO: save struct
         session.a           = str2double(get(data.geoEd(1),'String'));
         session.b           = str2double(get(data.geoEd(2),'String'));
         session.c           = str2double(get(data.geoEd(3),'String'));
         session.sang        = str2double(get(data.geoEd(4),'String'));
+        session.h_q         = str2double(get(data.geoEd(5),'String'));
+        session.etaq        = str2double(get(data.geoEd(6),'String'));
         session.phi         = get(data.dirSl(1),'Value');
         session.xs          = get(data.invSl(1),'Value');
         session.modeStr     = data.modeStr;
-        session.solsVisible = [get(data.sols_checkbox(1),'Value') get(data.sols_checkbox(2),'Value')];
+        session.solsVisible  = [get(data.sols_checkbox(1),'Value') get(data.sols_checkbox(2),'Value')];
+        session.showQTraj    = get(data.traj_checkbox,'Value');
+        session.axesXLim     = xlim(data.ax);
+        session.axesYLim     = ylim(data.ax);
         save(fullfile(char(p),char(f)),'session','-mat','-v6');
     end
 
@@ -550,10 +663,13 @@ updatePlot([],[]);
 
     function cbResetView(hFig)
         data = guidata(hFig);
+        data.userZoomed = false;
+        guidata(hFig,data);
         if isfield(data,'limits') && numel(data.limits)==4
-            xlim(data.ax,data.limits(1:2)); ylim(data.ax,data.limits(3:4));
+            axis(data.ax,'equal');
+            xlim(data.ax,data.limits(1:2));
+            ylim(data.ax,data.limits(3:4));
         end
-        axis(data.ax,'equal');
     end
 
     function cbPreferences(hFig)
@@ -562,4 +678,8 @@ updatePlot([],[]);
         else; grid(data.ax,'on'); end
     end
 
+end
+
+function cfg = sc_cfg(k)
+if k==1, cfg=+1; else cfg=-1; end
 end
