@@ -10,8 +10,8 @@ Support files for the kinematic analysis of linkages, some studied in the MEC631
 | Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Planar Five-Bar Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Planar Stephenson III Linkage* | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
-| Planar Q2 Leg Mechanism* | ✓ | — | ✓ | ✓ | ✓ | — | — |
+| Planar Stephenson III Linkage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Planar Q2 Leg Mechanism | ✓ | — | ✓ | ✓ | ✓ | — | — |
 | Spherical RRR Serial Chain* | ✓ | ✓ | — | ✓ | ✓ | — | — |
 | Spherical Four-Bar Linkage* | ✓ | ✓ | — | ✓ | ✓ | — | — |
 
