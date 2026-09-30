@@ -18,6 +18,14 @@ function fourbar_gui()
 %   >> fourbar_gui
 %   Opens the GUI with default link lengths and angle.
 %
+% SHOW D TRAJECTORY:
+%   Draws, for each displayed solution, the point D where the lines O-A
+%   and C-B intersect (instantaneous center of rotation of the coupler
+%   A-B), with fine black lines through O, A, D and through C, B, D, as
+%   well as the path of D over a full rotation of the crank (dotted for
+%   solution 1, dashed for solution 2, as the P trajectory). Where O-A
+%   and C-B are parallel, D is at infinity and is not drawn.
+%
 % BY:
 % Prof. Lionel Birglen
 % Polytechnique Montreal, 2025-...
@@ -219,15 +227,20 @@ end
 % ----------------------------------------------------------------
 % 9) Trajectory, animate button and info text
 % ----------------------------------------------------------------
+% Checkbox: show D = (OA) x (CB), its construction lines and its path
+dtraj_checkbox = uicontrol('Style','checkbox','Position',[20 235 270 20], ...
+    'String','Show D trajectory','Value',0, ...
+    'Callback',@updatePlot);
+
 % Checkbox: show P trajectory (for full crank rotation)
-traj_checkbox = uicontrol('Style','checkbox','Position',[20 235 270 20], ...
+traj_checkbox = uicontrol('Style','checkbox','Position',[20 214 270 20], ...
     'String','Show P trajectory','Value',0, ...
     'Callback',@updatePlot);
 
 animate_btn = uicontrol('Style','pushbutton','String','Animate', ...
-    'Position',[20 200 295 30], 'Callback',@toggleAnimation);
+    'Position',[20 180 295 30], 'Callback',@toggleAnimation);
 
-info_text = uicontrol('Style','text','Position',[20 95 295 100], ...
+info_text = uicontrol('Style','text','Position',[20 75 295 100], ...
     'FontSize', 10 - 1*isOctave, 'HorizontalAlignment','left');
 
 % ----------------------------------------------------------------
@@ -268,6 +281,7 @@ data.alphaSl       = alphaSlider;
 data.alphaTxt      = alphaValTxt;
 data.sols_checkbox  = sols_checkbox;
 data.traj_checkbox  = traj_checkbox;
+data.dtraj_checkbox = dtraj_checkbox;
 data.animateFlag   = false;
 data.timerObj      = [];
 data.animateBtn    = animate_btn;
@@ -276,8 +290,9 @@ data.alph_offset   = get(alphaSlider,'Value');
 data.info_text     = info_text;
 data.ax            = ax;
 data.limits       = lims;
-data.userZoomed   = false; 
-data.firstPlot    = true;  
+data.userZoomed   = false;  % true once the user has zoomed/panned
+data.firstPlot    = true;   % next redraw applies the geometry-based limits
+data.lastLimits   = [];     % limits in effect after the last redraw
 guidata(hFig,data);
 
 % In Octave, uicontrols and uipanels inherit the system grey background.
@@ -412,18 +427,23 @@ updatePlot([],[]);
             % Save current axes limits BEFORE clearing (user may have zoomed/panned)
             prevXLim = xlim(data.ax);
             prevYLim = ylim(data.ax);
-            tol = (data.limits(2)-data.limits(1)) * 1e-3;
+            % A zoom/pan is detected when the current limits differ from
+            % the ones in effect after the previous redraw. It is then
+            % remembered (data.userZoomed) until View > Reset View or a
+            % new session, so the user's view is kept while the linkage
+            % moves. Comparing with the previous redraw (not with the
+            % geometry-based limits) also lets a geometry change update
+            % the view when the user has not zoomed.
             if ~isfield(data,'userZoomed'), data.userZoomed = false; end
             if ~isfield(data,'firstPlot'),  data.firstPlot  = true;  end
+            if ~isfield(data,'lastLimits'), data.lastLimits = [];    end
             if data.firstPlot
-                userZoomed = false;
-                data.firstPlot = false;
-                guidata(hFig,data);
-            else
-                userZoomed = data.userZoomed || ...
-                    abs(prevXLim(1)-data.limits(1))>tol || abs(prevXLim(2)-data.limits(2))>tol || ...
-                    abs(prevYLim(1)-data.limits(3))>tol || abs(prevYLim(2)-data.limits(4))>tol;
+                data.userZoomed = false;
+            elseif ~data.userZoomed && numel(data.lastLimits) == 4
+                tol = max(abs(data.lastLimits(2)-data.lastLimits(1)), eps) * 1e-3;
+                data.userZoomed = any(abs([prevXLim prevYLim] - data.lastLimits) > tol);
             end
+            userZoomed = data.userZoomed;
             opts.clearAxes  = true;
             opts.limits     = [];  % limits applied after plot, not inside
             opts.showLabels = true;
@@ -507,6 +527,45 @@ updatePlot([],[]);
                     plot(ax, P_traj_alt(1,:), P_traj_alt(2,:), 'k--', 'LineWidth',lw_traj);
                 end
             end
+            % --- Point D = (OA) x (CB): construction lines and path -----
+            if get(data.dtraj_checkbox,'Value')
+                lw_fine = 0.5; if isOctave, lw_fine = 0.25; end
+                lw_traj = 1.0; if isOctave, lw_traj = 0.4; end
+                ms_D    = 8;   if isOctave, ms_D    = 2;    end
+                fs_D    = 10;  if isOctave, fs_D    = 14;   end
+                styles  = {'k:','k--'};
+                dxl = g(1)/20;     % label offset, as in fourbar_plot (a/20)
+                for i = selSol
+                    if i > numel(sol) || (isfield(sol(i),'valid') && ~sol(i).valid)
+                        continue;
+                    end
+                    Pos = sol(i).Positions;
+                    D = lineIntersect(Pos.O, Pos.A, Pos.C, Pos.B);
+                    if all(isfinite(D))
+                        drawThroughPoints(data.ax, [Pos.O Pos.A D], lw_fine);
+                        drawThroughPoints(data.ax, [Pos.C Pos.B D], lw_fine);
+                        plot(data.ax, D(1), D(2), 'kx', 'MarkerSize', ms_D, ...
+                            'LineWidth', lw_traj);
+                        text(data.ax, D(1)+dxl, D(2)+dxl, 'D', 'FontSize', fs_D, ...
+                            'Color','k', 'HorizontalAlignment','left', ...
+                            'VerticalAlignment','bottom');
+                    end
+                    % Path of D over a full crank rotation (branch i),
+                    % computed once per geometry (cached)
+                    Dpaths = dPaths(g);
+                    D_traj = Dpaths(:,:,i);
+                    % Break the curve where D goes to infinity (O-A and C-B
+                    % parallel), so no segment is drawn across the view
+                    Rv = max(abs(data.limits));
+                    far  = any(abs(D_traj) > 50*Rv, 1);
+                    D_traj(:, far) = NaN;
+                    jump = [false, sqrt(sum(diff(D_traj,1,2).^2,1)) > Rv];
+                    D_traj(:, jump) = NaN;
+                    plot(data.ax, D_traj(1,:), D_traj(2,:), styles{min(i,2)}, ...
+                        'LineWidth', lw_traj);
+                end
+            end
+
             if userZoomed
                 xlim(data.ax, prevXLim);
                 ylim(data.ax, prevYLim);
@@ -515,6 +574,15 @@ updatePlot([],[]);
                 xlim(data.ax, data.limits(1:2));
                 ylim(data.ax, data.limits(3:4));
             end
+            % Store the view state. The GUI data is re-read first so that
+            % fields changed meanwhile by other callbacks (e.g. the
+            % animation flag set by the Stop button) are not overwritten.
+            dView = guidata(hFig);
+            dView.limits     = data.limits;
+            dView.userZoomed = userZoomed;
+            dView.firstPlot  = false;
+            dView.lastLimits = [xlim(data.ax) ylim(data.ax)];
+            guidata(hFig, dView);
             drawnow();
 
         catch ME
@@ -638,17 +706,30 @@ updatePlot([],[]);
         if isfield(session,'showTraj')
             set(data.traj_checkbox,'Value', session.showTraj);
         end
-        if isfield(session,'axesXLim') && isfield(session,'axesYLim')
-            data.userZoomed = true;
-            data.firstPlot  = false;
-            data.userXLim   = session.axesXLim;
-            data.userYLim   = session.axesYLim;
+        if isfield(session,'showDTraj')
+            set(data.dtraj_checkbox,'Value', session.showDTraj);
         end
+        % View: first draw the new session with its geometry-based
+        % limits; then restore the saved view, and keep it as a user
+        % view, only if it differs from those limits (i.e. the session
+        % was saved zoomed or panned)
+        data.userZoomed = false;
+        data.firstPlot  = true;
         guidata(hFig, data);
         updatePlot([],[]);
-        if isfield(session,'axesXLim') && isfield(session,'axesYLim')
-            xlim(data.ax, session.axesXLim);
-            ylim(data.ax, session.axesYLim);
+        if isfield(session,'axesXLim') && isfield(session,'axesYLim') && ...
+                numel(session.axesXLim) == 2 && numel(session.axesYLim) == 2
+            data = guidata(hFig);
+            cur = [xlim(data.ax) ylim(data.ax)];
+            sav = [session.axesXLim(:).' session.axesYLim(:).'];
+            tol = max(abs(cur(2)-cur(1)), eps) * 1e-3;
+            if any(abs(sav - cur) > tol)
+                xlim(data.ax, session.axesXLim);
+                ylim(data.ax, session.axesYLim);
+                data.userZoomed = true;
+                data.lastLimits = [xlim(data.ax) ylim(data.ax)];
+                guidata(hFig, data);
+            end
         end
     end
 
@@ -671,6 +752,7 @@ updatePlot([],[]);
             session.solsVisible(ii) = get(data.sols_checkbox(ii),'Value');
         end
         session.showTraj    = get(data.traj_checkbox,'Value');
+        session.showDTraj   = get(data.dtraj_checkbox,'Value');
         session.axesXLim    = xlim(data.ax);
         session.axesYLim    = ylim(data.ax);
         save(target, 'session', '-mat', '-v6');
@@ -748,14 +830,13 @@ updatePlot([],[]);
     end
 
     function cbResetView(hFig)
-        ax = findall(hFig,'Type','axes');
-        for k = 1:numel(ax)
-            try
-                axis(ax(k),'auto');
-            catch, end
-            try, zoom(ax(k),'out'); catch, end
-        end
-        drawnow();
+        % Drop any user zoom/pan and redraw with the geometry-based limits
+        data = guidata(hFig);
+        data.userZoomed = false;
+        data.firstPlot  = true;
+        guidata(hFig, data);
+        try, zoom(data.ax,'reset'); catch, end   % forget zoom history
+        updatePlot([],[]);
     end
 
     function cbPreferences(hFig)
@@ -787,4 +868,60 @@ updatePlot([],[]);
         end
     end
 
+end
+
+
+% ================================================================
+%  Local functions (outside the nested scope)
+% ================================================================
+function X = lineIntersect(P1, P2, P3, P4)
+% Intersection of line (P1,P2) with line (P3,P4); [NaN;NaN] if the lines
+% are parallel (or a line is degenerate)
+d1 = P2(:) - P1(:);  d2 = P4(:) - P3(:);
+den = d1(1)*d2(2) - d1(2)*d2(1);
+if ~all(isfinite([d1; d2])) || abs(den) <= 1e-12 * norm(d1) * norm(d2) ...
+        || norm(d1) == 0 || norm(d2) == 0
+    X = [NaN; NaN];
+    return;
+end
+w = P3(:) - P1(:);
+X = P1(:) + (w(1)*d2(2) - w(2)*d2(1)) / den * d1;
+end
+
+function P = dPaths(g)
+% Path of D = (OA) x (CB) over a full crank rotation, for both assembly
+% modes: 2 x 721 x 2 array (NaN where the mode does not assemble or D is
+% at infinity). Cached: recomputed only when the geometry g changes, so
+% moving the slider or animating stays fast.
+persistent gLast PLast
+if ~isempty(gLast) && isequal(gLast, g)
+    P = PLast;
+    return;
+end
+thetas = linspace(0, 2*pi, 721);
+P = nan(2, numel(thetas), 2);
+for ii = 1:numel(thetas)
+    solDir = fourbar_direct_kinematics(g, thetas(ii));
+    for b = 1:min(2, numel(solDir))
+        if solDir(b).valid
+            Q = solDir(b).Positions;
+            P(:,ii,b) = lineIntersect(Q.O, Q.A, Q.C, Q.B);
+        end
+    end
+end
+gLast = g;
+PLast = P;
+end
+
+function drawThroughPoints(ax, pts, lw)
+% Fine black line through collinear points (columns of pts), drawn
+% between the two extreme ones so that it passes through all of them
+d = pts(:,2) - pts(:,1);
+if norm(d) == 0, d = pts(:,3) - pts(:,1); end
+if norm(d) == 0, return; end
+d = d / norm(d);
+t = d.' * (pts - pts(:,1) * ones(1, size(pts,2)));
+p0 = pts(:,1) + min(t) * d;
+p1 = pts(:,1) + max(t) * d;
+plot(ax, [p0(1) p1(1)], [p0(2) p1(2)], 'k-', 'LineWidth', lw);
 end
