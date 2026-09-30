@@ -43,7 +43,7 @@ The kinematics functions of the planar linkages return a struct array with one e
 
 <a href="./Media/FourbarGUI_matlab.png"><img src="./Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="250"></a> 
 <a href="./Media/FourbarGUI_octave.png"><img src="./Media/FourbarGUI_octave.png" alt="Planar Fourbar GUI in Octave" width="250"></a> 
-<a href="./Media/FourbarGUI_Python.png"><img src="./Media/FourbarGUI_Python.png" alt="Planar Fourbar GUI in Python" width="250"></a> 
+<a href="./Media/FourbarGUI_python.png"><img src="./Media/FourbarGUI_python.png" alt="Planar Fourbar GUI in Python" width="250"></a> 
 
 *Left to right: planar four-bar linkage in Matlab, Octave, and Python.*
 
@@ -77,8 +77,8 @@ fourbar_plot(geo, 'direct', deg2rad(106));
 ### Planar RRR Serial Chain
 
 <a href="./Media/RRRGUI_matlab.png"><img src="./Media/RRRGUI_matlab.png" alt="Planar RRR GUI in Matlab" width="250"></a> 
-<a href="./Media/RRRbarGUI_octave.png"><img src="./Media/RRRGUI_octave.png" alt="Planar RRR GUI in Octave" width="250"></a> 
-<a href="./Media/RRRbarGUI_Python.png"><img src="./Media/RRRGUI_Python.png" alt="Planar RRR GUI in Python" width="250"></a> 
+<a href="./Media/RRRGUI_octave.png"><img src="./Media/RRRGUI_octave.png" alt="Planar RRR GUI in Octave" width="250"></a> 
+<a href="./Media/RRRGUI_python.png"><img src="./Media/RRRGUI_python.png" alt="Planar RRR GUI in Python" width="250"></a> 
 
 *Left to right: planar RRR linkage in Matlab, Octave, and Python.*
 
@@ -103,8 +103,8 @@ rad2deg(inv(1).theta)   % elbow-up joint angles (inv(2): elbow-down)
 ### Slider-Crank Linkage
 
 <a href="./Media/SliderCrankGUI_matlab.png"><img src="./Media/SliderCrankGUI_matlab.png" alt="Planar Slider Crank GUI in Matlab" width="250"></a> 
-<a href="./Media/SliderCrankbarGUI_octave.png"><img src="./Media/SliderCrankGUI_octave.png" alt="Planar Slider Crank GUI in Octave" width="250"></a> 
-<a href="./Media/SliderCrankbarGUI_Python.png"><img src="./Media/SliderCrankGUI_Python.png" alt="Planar Slider Crank GUI in Python" width="250"></a> 
+<a href="./Media/SliderCrankGUI_octave.png"><img src="./Media/SliderCrankGUI_octave.png" alt="Planar Slider Crank GUI in Octave" width="250"></a> 
+<a href="./Media/SliderCrankGUI_python.png"><img src="./Media/SliderCrankGUI_python.png" alt="Planar Slider Crank GUI in Python" width="250"></a> 
 
 *Left to right: planar RRR linkage in Matlab, Octave, and Python.*
 
@@ -128,7 +128,7 @@ sol.Positions.Q     % coupler point Q
 
 <a href="./Media/FivebarGUI_matlab.png"><img src="./Media/FivebarGUI_matlab.png" alt="Planar Fivebar GUI in Matlab" width="250"></a> 
 <a href="./Media/FivebarGUI_octave.png"><img src="./Media/FivebarGUI_octave.png" alt="Planar Fivebar Crank GUI in Octave" width="250"></a> 
-<a href="./Media/FivebarGUI_Python.png"><img src="./Media/FivebarGUI_Python.png" alt="Planar Fivebar Crank GUI in Python" width="250"></a> 
+<a href="./Media/FivebarGUI_python.png"><img src="./Media/FivebarGUI_python.png" alt="Planar Fivebar Crank GUI in Python" width="250"></a> 
 
 *Left to right: planar Fivebar linkage in Matlab, Octave, and Python.*
 
@@ -159,7 +159,7 @@ invSol = fivebar_inverse_kinematics(geo, P_des);
 
 <a href="./Media/StephensonIIIGUI_matlab.png"><img src="./Media/StephensonIIIGUI_matlab.png" alt="Planar Stephenson III GUI in Matlab" width="250"></a> 
 <a href="./Media/StephensonIIIGUI_octave.png"><img src="./Media/StephensonIIIGUI_octave.png" alt="Planar Stephenson III Crank GUI in Octave" width="250"></a> 
-<a href="./Media/StephensonIIIGUI_Python.png"><img src="./Media/StephensonIIIGUI_Python.png" alt="Planar Stephenson III Crank GUI in Python" width="250"></a> 
+<a href="./Media/StephensonIIIGUI_python.png"><img src="./Media/StephensonIIIGUI_python.png" alt="Planar Stephenson III Crank GUI in Python" width="250"></a> 
 
 *Left to right: planar Stephenson III linkage in Matlab, Octave, and Python.*
 
