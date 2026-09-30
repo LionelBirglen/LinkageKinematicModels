@@ -196,8 +196,8 @@ numel(stephensonIII_inverse_kinematics(geo6, 127.07))  % -> 6
 A planar leg mechanism with two actuators: a crank at A (angle θA) and a prismatic actuator E-K (length ρ). Its links: ground A-B, input crank A-C, ternary body B-D-E, quaternary body C-D-G-F, ternary bodies G-K-J and I-J-P, and link I-F.<br>
 
 This mechanism is proposed and discussed in:<br>
-https://doi.org/10.1007/978-3-031-45705-0_29<br>
-https://doi.org/10.1007/978-3-031-95489-4_11
+Birglen, L., Hely, C. (2023). Kinematic Analysis of a Biocompatible Lower Limb Model. In: Okada, M. (eds) Advances in Mechanism and Machine Science. IFToMM WC 2023. Mechanisms and Machine Science, vol 147. Springer, Cham. https://doi.org/10.1007/978-3-031-45705-0_29<br>
+Birglen, L. (2025). A Compliant Q Linkage to Model the Human Lower Limb Motion. In: Lanteigne, E., Nokleby, S. (eds) Proceedings of the 2025 CCToMM Symposium on Mechanisms, Machines, and Mechatronics. CCToMM M3 2025. Mechanisms and Machine Science, vol 184. Springer, Cham. https://doi.org/10.1007/978-3-031-95489-4_11
 
 | File | Description |
 |---|---|
@@ -218,6 +218,19 @@ find([sol.valid])                                     % -> all 8 branches assemb
 W = Q2_leg_mechanism_workspace(p, deg2rad([-180 180]), [50 400]);
 Q2_leg_mechanism_plot(p, 'direct', [0 154], struct('solutions', 2, 'workspace', W));
 ```
+
+### Spherical RRR Linkage
+
+<a href="./Media/RRRSphericalGUI_matlab.png"><img src="./Media/RRRSphericalGUI_matlab.png" alt="Spherical RRR Mechanism GUI in Matlab" width="250"></a> 
+
+*WORK IN PROGRESS*
+
+### Spherical fourbar Linkage
+
+<a href="./Media/FourbarSphericalGUI_matlab.png"><img src="./Media/FourbarSphericalGUI_matlab.png" alt="Spherical Fourbar Mechanism GUI in Matlab" width="250"></a> 
+
+*WORK IN PROGRESS*
+
 
 ### Running the GUIs
 
