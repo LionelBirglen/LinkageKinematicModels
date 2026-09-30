@@ -196,8 +196,8 @@ numel(stephensonIII_inverse_kinematics(geo6, 127.07))  % -> 6
 A planar leg mechanism with two actuators: a crank at A (angle θA) and a prismatic actuator E-K (length ρ). Its links: ground A-B, input crank A-C, ternary body B-D-E, quaternary body C-D-G-F, ternary bodies G-K-J and I-J-P, and link I-F.<br>
 
 This mechanism is proposed and discussed in:<br>
-Birglen, L., Hely, C. (2023). Kinematic Analysis of a Biocompatible Lower Limb Model. In: Okada, M. (eds) Advances in Mechanism and Machine Science. IFToMM WC 2023. Mechanisms and Machine Science, vol 147. Springer, Cham. https://doi.org/10.1007/978-3-031-45705-0_29<br>
-Birglen, L. (2025). A Compliant Q Linkage to Model the Human Lower Limb Motion. In: Lanteigne, E., Nokleby, S. (eds) Proceedings of the 2025 CCToMM Symposium on Mechanisms, Machines, and Mechatronics. CCToMM M3 2025. Mechanisms and Machine Science, vol 184. Springer, Cham. https://doi.org/10.1007/978-3-031-95489-4_11
+- Birglen, L., Hely, C. (2023). Kinematic Analysis of a Biocompatible Lower Limb Model. In: Okada, M. (eds) Advances in Mechanism and Machine Science. IFToMM WC 2023. Mechanisms and Machine Science, vol 147. Springer, Cham. https://doi.org/10.1007/978-3-031-45705-0_29<br>
+- Birglen, L. (2025). A Compliant Q Linkage to Model the Human Lower Limb Motion. In: Lanteigne, E., Nokleby, S. (eds) Proceedings of the 2025 CCToMM Symposium on Mechanisms, Machines, and Mechatronics. CCToMM M3 2025. Mechanisms and Machine Science, vol 184. Springer, Cham. https://doi.org/10.1007/978-3-031-95489-4_11
 
 | File | Description |
 |---|---|
