@@ -41,6 +41,13 @@ The kinematics functions of the planar linkages return a struct array with one e
 
 ### Four-Bar Linkage
 
+<a href="./Media/FourbarGUI_matlab.png"><img src="./Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="250"></a> 
+<a href="./Media/FourbarGUI_octave.png"><img src="./Media/FourbarGUI_octave.png" alt="Planar Fourbar GUI in Octave" width="250"></a> 
+<a href="./Media/FourbarGUI_Python.png"><img src="./Media/FourbarGUI_Python.png" alt="Planar Fourbar GUI in Python" width="250"></a> 
+
+*Left to right: planar four-bar linkage in Matlab, Octave, and Python.*
+
+
 | File | Description |
 |---|---|
 | `fourbar_direct_kinematics.m` | Direct kinematics — given crank angle θ, returns positions of all joints, coupler point P, optional points Q and R, and joint twists for both assembly modes |
@@ -327,15 +334,6 @@ The MATLAB structs may also hold `Positions.Q` / `Positions.R` (optional points 
 
 ---
 
-## Screenshots
-
-<a href="./Media/FourbarGUI_matlab.png"><img src="./Media/FourbarGUI_matlab.png" alt="Planar Fourbar GUI in Matlab" width="250"></a> 
-<a href="./Media/FourbarGUI_octave.png"><img src="./Media/FourbarGUI_octave.png" alt="Planar Fourbar GUI in Octave" width="250"></a> 
-<a href="./Media/FourbarGUI_Python.png"><img src="./Media/FourbarGUI_Python.png" alt="Planar Fourbar GUI in Python" width="250"></a> 
-
-*Left to right: planar four-bar linkage in Matlab, Octave, and Python.*
-
----
 
 ## License
 
