@@ -106,7 +106,7 @@ rad2deg(inv(1).theta)   % elbow-up joint angles (inv(2): elbow-down)
 <a href="./Media/SliderCrankGUI_octave.png"><img src="./Media/SliderCrankGUI_octave.png" alt="Planar Slider Crank GUI in Octave" width="250"></a> 
 <a href="./Media/SliderCrankGUI_python.png"><img src="./Media/SliderCrankGUI_python.png" alt="Planar Slider Crank GUI in Python" width="250"></a> 
 
-*Left to right: planar RRR linkage in Matlab, Octave, and Python.*
+*Left to right: planar slider crank linkage in Matlab, Octave, and Python.*
 
 
 | File | Description |
