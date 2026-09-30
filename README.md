@@ -8,12 +8,12 @@ Support files for the kinematic analysis of linkages, some studied in the MEC631
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | Planar Four-Bar Linkage | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | Planar RRR Serial Chain | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
-| Planar Slider-Crank | ✓ | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ |
+| Planar Slider-Crank     | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
 | Planar Five-Bar Linkage | ✓ | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ |
-| Planar Stephenson III Linkage | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ |
-| Planar Q2 Leg Mechanism | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | — |
-| Spherical RRR Serial Chain* | ✓ | ✓ | — | ✓ | — | ✓ | — | — |
-| Spherical Four-Bar Linkage* | ✓ | ✓ | — | ✓ | — | ✓ | — | — |
+| Planar Stephenson III Linkage | ✓ | ✓ | ✓ |✓ | — |  ✓ | ✓ | ✓ |
+| Planar Q2 Leg Mechanism       | ✓ | — | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Spherical RRR Serial Chain*   | ✓ | ✓ | — | ✓ | — | ✓ | — | — |
+| Spherical Four-Bar Linkage*   | ✓ | ✓ | — | ✓ | — | ✓ | — | — |
 
 *: preliminary versions, not as well polished as other linkages. The inverse kinematics of the Q2 leg mechanism is in progress.<br/>
 For mechanism definition, points, angles, and lengths convention see the gui and kinematics files.
