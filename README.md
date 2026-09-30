@@ -187,7 +187,17 @@ numel(stephensonIII_inverse_kinematics(geo6, 127.07))  % -> 6
 
 ### Q2 Leg Mechanism
 
-A planar leg mechanism with two actuators: a crank at A (angle θA) and a prismatic actuator E-K (length ρ). Its links: ground A-B, input crank A-C, ternary body B-D-E, quaternary body C-D-G-F, ternary bodies G-K-J and I-J-P, and link I-F.
+<a href="./Media/Q2LegGUI_matlab.png"><img src="./Media/Q2LegGUI_matlab.png" alt="Planar Q2 Leg Mechanism GUI in Matlab" width="250"></a> 
+<a href="./Media/Q2LegGUI_octave.png"><img src="./Media/Q2LegGUI_octave.png" alt="Planar Q2 Leg Mechanism GUI in Octave" width="250"></a> 
+<a href="./Media/Q2LegGUI_python.png"><img src="./Media/Q2LegGUI_python.png" alt="Planar Q2 Leg Mechanism GUI in Python" width="250"></a> 
+
+*Left to right: planar Q2 Leg Mechanism in Matlab, Octave, and Python.*
+
+A planar leg mechanism with two actuators: a crank at A (angle θA) and a prismatic actuator E-K (length ρ). Its links: ground A-B, input crank A-C, ternary body B-D-E, quaternary body C-D-G-F, ternary bodies G-K-J and I-J-P, and link I-F.<br>
+
+This mechanism is proposed and discussed in:<br>
+https://doi.org/10.1007/978-3-031-45705-0_29<br>
+https://doi.org/10.1007/978-3-031-95489-4_11
 
 | File | Description |
 |---|---|
