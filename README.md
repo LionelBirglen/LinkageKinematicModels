@@ -2,6 +2,10 @@
 
 Support files for the kinematic analysis of linkages, some studied in the MEC6319 course at Polytechnique Montréal. Mechanisms are provided with standalone direct kinematics, inverse kinematics, and plot functions, as well as a fully interactive GUI — in **MATLAB/Octave** and, for the main planar linkages, **Python**. Complete multiple solutions of the direct and inverse kinematics are taken into account. Most files were generated with the assistance of an AI.
 
+![StephensonIIIExample](media/stephensonIII_session_example.gif)
+*Example of the animation of a Stephenson III linkage.*
+
+
 ## Mechanisms Included
 
 | Mechanism | Direct Kinematics | Inverse Kinematics | Plot | GUI | Workspace | Matlab | Octave | Python |
